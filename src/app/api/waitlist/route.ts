@@ -19,12 +19,24 @@ function normalizePhone(raw: string): string | null {
   return normalized
 }
 
+/** Топ городов по числу заявок — живые данные для блока «Города первой волны» */
+async function topCities(take: number): Promise<{ city: string; count: number }[]> {
+  const grouped = await db.waitlistEntry.groupBy({
+    by: ['city'],
+    _count: { city: true },
+    orderBy: { _count: { city: 'desc' } },
+    take,
+  })
+  return grouped.map((g) => ({ city: g.city, count: g._count.city }))
+}
+
 export async function GET() {
   try {
     const count = await db.waitlistEntry.count()
-    return NextResponse.json({ count })
+    const cities = await topCities(6)
+    return NextResponse.json({ count, cities })
   } catch {
-    return NextResponse.json({ count: 0 })
+    return NextResponse.json({ count: 0, cities: [] })
   }
 }
 
@@ -59,10 +71,12 @@ export async function POST(req: NextRequest) {
     const existing = await db.waitlistEntry.findFirst({ where: { phone } })
     if (existing) {
       const count = await db.waitlistEntry.count()
+      const cities = await topCities(6)
       return NextResponse.json({
         ok: true,
         duplicate: true,
         count,
+        cities,
         position: count,
         message: 'Вы уже в списке — мы помним вас и пришлём инвайт в первой волне.',
       })
@@ -72,11 +86,13 @@ export async function POST(req: NextRequest) {
       data: { role, name, phone, city, comment },
     })
     const count = await db.waitlistEntry.count()
+    const cities = await topCities(6)
 
     return NextResponse.json({
       ok: true,
       id: entry.id,
       count,
+      cities,
       position: count,
       message:
         role === 'fleet'

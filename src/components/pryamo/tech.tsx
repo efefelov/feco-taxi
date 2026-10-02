@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
+import { useEffect, useRef, useState } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import {
   Car,
   Lock,
@@ -48,8 +48,26 @@ function TunnelPanel() {
     phase: 'idle',
     cancelled: false,
   })
+  const statusRef = useRef<HTMLDivElement>(null)
+  const prevPhaseRef = useRef<Phase>('idle')
+  const reducedMotion = useReducedMotion()
 
   const { progress, phase, cancelled } = run
+
+  // Итог заезда на узких экранах может быть ниже сгиба: подводим статусную карточку
+  useEffect(() => {
+    const wasRunning = prevPhaseRef.current !== 'done'
+    prevPhaseRef.current = phase
+    if (phase !== 'done' || !wasRunning) return
+    const node = statusRef.current
+    if (!node || window.innerWidth >= 1024) return
+    const rect = node.getBoundingClientRect()
+    if (rect.top >= 0 && rect.bottom <= window.innerHeight) return
+    node.scrollIntoView({
+      block: 'nearest',
+      behavior: reducedMotion ? 'auto' : 'smooth',
+    })
+  }, [phase, reducedMotion])
 
   // Прогресс заезда: тик 100 мс = +1% пути (весь заезд ~10 с)
   useEffect(() => {
@@ -204,7 +222,7 @@ function TunnelPanel() {
                   {locked && <Lock className="h-3 w-3 text-zinc-500" aria-hidden />}
                   {n.name}
                 </span>
-                <span className="mt-0.5 block text-[10px] leading-tight text-zinc-500">
+                <span className="mt-1 block text-[10px] leading-relaxed text-zinc-500">
                   {locked ? 'только у ПРЯМО' : n.note}
                 </span>
               </button>
@@ -307,8 +325,9 @@ function TunnelPanel() {
 
       {/* Статус */}
       <div
+        ref={statusRef}
         className={cn(
-          'mt-3 flex-1 rounded-xl border p-3.5 transition-colors duration-300',
+          'mt-3 flex-1 scroll-mt-24 rounded-xl border p-3.5 transition-colors duration-300',
           statusCls
         )}
         role="status"

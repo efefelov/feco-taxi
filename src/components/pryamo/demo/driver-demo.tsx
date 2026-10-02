@@ -51,6 +51,11 @@ function timeLeft(expiresAt: string): number {
 export function DriverDemo() {
   const [seen] = useState(() => new Set<string>())
   const [driverRide, setDriverRide] = useState<RideDTO | null>(null)
+  // Единая лента смены: принятые заказы встают в очередь, завершённые поездки — отмечаются
+  const rideOrderQueueRef = useRef<string[]>([])
+  const [completedOrderIds, setCompletedOrderIds] = useState<ReadonlySet<string>>(
+    () => new Set<string>()
+  )
 
   const { orders, connected, history, markMine, markLost, markSkipped } = useDriverFeed((o) => {
     if (!seen.has(o.id)) {
@@ -68,6 +73,15 @@ export function DriverDemo() {
     onRideState: (r) => setDriverRide(r),
     onCompleted: (r) => {
       setDriverRide(r)
+      // Завершённая поездка отмечает свой заказ в единой ленте смены
+      const doneId = rideOrderQueueRef.current.shift()
+      if (doneId) {
+        setCompletedOrderIds((prev) => {
+          const next = new Set(prev)
+          next.add(doneId)
+          return next
+        })
+      }
       toast({
         title: 'Поездка завершена',
         description: `Выплата ${rub(r.driverPayout)} зачислена. Комиссия — только 8%.`,
@@ -84,9 +98,10 @@ export function DriverDemo() {
     },
   })
 
-  // Обёртки приёма/отказа: помечаем судьбу заказа для журнала ленты
+  // Обёртки приёма/отказа: помечаем судьбу заказа для единой ленты смены
   const handleAccept = (id: string) => {
     markMine(id)
+    rideOrderQueueRef.current.push(id)
     accept(id)
   }
 
@@ -220,8 +235,8 @@ export function DriverDemo() {
           </div>
         </div>
 
-        {/* Журнал ленты: судьба каждого заказа + штрафа всегда ноль */}
-        <OrderHistoryLog history={history} />
+        {/* Единая лента смены: судьба каждого заказа + штрафа всегда ноль */}
+        <OrderHistoryLog history={history} completedOrderIds={completedOrderIds} />
       </div>
 
       {/* Правая колонка: доход + спрос + платформа */}
@@ -276,25 +291,6 @@ export function DriverDemo() {
                   <p className="text-[10px] uppercase text-zinc-500">комиссия</p>
                 </div>
               </div>
-
-              {lastRides.length > 0 && (
-                <div className="mt-4 space-y-1.5 border-t border-zinc-800 pt-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-                    Последние поездки
-                  </p>
-                  {lastRides.slice(0, 4).map((r, i) => (
-                    <div key={r.id ?? i} className="flex items-center justify-between text-xs">
-                      <span className="max-w-44 truncate text-zinc-400">
-                        <Check className="mr-1 inline h-3 w-3 text-emerald-500" />
-                        {r.from?.label} → {r.to?.label}
-                      </span>
-                      <span className="font-bold tabular-nums text-emerald-400">
-                        {rub(r.driverPayout)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
 
               <div className="mt-3 rounded-lg border border-rose-500/20 bg-rose-500/5 p-2.5 text-[11px] text-zinc-400">
                 У монополиста с такого же оборота{' '}
@@ -533,7 +529,7 @@ function StatTile({
   )
 }
 
-// ===== Журнал ленты: судьба каждого заказа =====
+// ===== Единая лента смены: судьба каждого заказа =====
 
 type HistoryFilter = 'all' | FeedHistoryEntry['status']
 
@@ -575,7 +571,14 @@ function historyTime(at: number): string {
   })
 }
 
-function OrderHistoryLog({ history }: { history: FeedHistoryEntry[] }) {
+function OrderHistoryLog({
+  history,
+  completedOrderIds,
+}: {
+  history: FeedHistoryEntry[]
+  /** Заказы, чья поездка уже завершена (для маркеров «завершена» / «едет») */
+  completedOrderIds: ReadonlySet<string>
+}) {
   const [filter, setFilter] = useState<HistoryFilter>('all')
 
   const counts = useMemo(
@@ -591,6 +594,13 @@ function OrderHistoryLog({ history }: { history: FeedHistoryEntry[] }) {
 
   const filtered = filter === 'all' ? history : history.filter((h) => h.status === filter)
 
+  // Сводка по вашим поездкам: перенята из блока «Последние поездки»
+  const mineSummary = useMemo(() => {
+    const mine = history.filter((h) => h.status === 'mine')
+    const payout = mine.reduce((acc, h) => acc + h.order.driverPayout, 0)
+    return { count: mine.length, payout }
+  }, [history])
+
   const chips: { key: HistoryFilter; label: string }[] = [
     { key: 'all', label: 'Все' },
     { key: 'mine', label: 'Ваши' },
@@ -604,7 +614,7 @@ function OrderHistoryLog({ history }: { history: FeedHistoryEntry[] }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-lg font-bold text-white">
           <History className="h-5 w-5 text-emerald-400" />
-          Журнал ленты
+          Лента смены
           <span className="rounded-lg bg-zinc-800 px-2 py-0.5 text-sm font-black tabular-nums text-emerald-300">
             {history.length}
           </span>
@@ -615,7 +625,7 @@ function OrderHistoryLog({ history }: { history: FeedHistoryEntry[] }) {
         </span>
       </div>
       <p className="mt-1.5 text-xs text-zinc-500">
-        Судьба каждого заказа, который прошёл через ленту. У монополиста отказы из этой ленты
+        Каждый заказ смены в одном месте — от появления в ленте до выплаты. У монополиста отказы
         роняют «карточку качества» — у нас просто остаются в журнале.
       </p>
 
@@ -648,6 +658,8 @@ function OrderHistoryLog({ history }: { history: FeedHistoryEntry[] }) {
               {filtered.map((h) => {
                 const meta = HISTORY_STATUS[h.status]
                 const o = h.order
+                const isCompletedRide = h.status === 'mine' && completedOrderIds.has(h.id)
+                const isDriving = h.status === 'mine' && !isCompletedRide
                 return (
                   <motion.div
                     key={h.id + h.at}
@@ -655,7 +667,10 @@ function OrderHistoryLog({ history }: { history: FeedHistoryEntry[] }) {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="flex items-center gap-2.5 rounded-lg border border-zinc-800/70 bg-zinc-950/40 px-3 py-2 transition-colors hover:border-zinc-700"
+                    className={cn(
+                      'flex items-center gap-2.5 rounded-lg border bg-zinc-950/40 px-3 py-2 transition-colors hover:border-zinc-700',
+                      isCompletedRide ? 'border-emerald-500/30' : 'border-zinc-800/70'
+                    )}
                   >
                     <span
                       className={cn(
@@ -669,8 +684,20 @@ function OrderHistoryLog({ history }: { history: FeedHistoryEntry[] }) {
                       <p className="truncate text-xs font-semibold text-zinc-300">
                         {o.from.label} → {o.to.label}
                       </p>
-                      <p className="text-[10px] uppercase tracking-wide text-zinc-600">
-                        {o.tariff.name} · {meta.chip}
+                      <p className="flex flex-wrap items-center gap-1.5 text-[10px] uppercase tracking-wide text-zinc-600">
+                        <span>
+                          {o.tariff.name} · {meta.chip}
+                        </span>
+                        {isDriving && (
+                          <span className="rounded bg-amber-400/10 px-1.5 py-0.5 font-bold normal-case tracking-normal text-amber-300">
+                            едет сейчас
+                          </span>
+                        )}
+                        {isCompletedRide && (
+                          <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 font-bold normal-case tracking-normal text-emerald-300">
+                            завершена
+                          </span>
+                        )}
                       </p>
                     </div>
                     <div className="shrink-0 text-right">
@@ -695,6 +722,20 @@ function OrderHistoryLog({ history }: { history: FeedHistoryEntry[] }) {
       {history.length === 0 && (
         <div className="mt-3 flex h-28 items-center justify-center rounded-xl border border-dashed border-zinc-800 text-sm text-zinc-500">
           Ждём первых разобранных заказов — обычно через 30–60 секунд
+        </div>
+      )}
+
+      {/* Сводка по вашим поездкам: выплаты считаются здесь же, в ленте */}
+      {mineSummary.count > 0 && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-3.5 py-2.5">
+          <p className="text-xs font-semibold text-zinc-300">
+            Ваши поездки за смену:{' '}
+            <span className="font-black tabular-nums text-white">{mineSummary.count}</span>{' '}
+            {plural(mineSummary.count, 'заказ', 'заказа', 'заказов')}
+          </p>
+          <p className="text-sm font-black tabular-nums text-emerald-400">
+            +{rub(mineSummary.payout)}
+          </p>
         </div>
       )}
     </div>

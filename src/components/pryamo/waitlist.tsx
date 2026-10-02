@@ -19,9 +19,17 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { toast } from '@/hooks/use-toast'
 import { num, plural } from '@/lib/pryamo/format'
+import { CountUp } from '@/components/pryamo/count-up'
 import { OnboardingTrigger } from '@/components/pryamo/onboarding'
 
 const BASE_TARGET = 1000
+/** Порог запуска города — из обещания в тексте секции */
+const CITY_TARGET = 200
+
+interface CityStat {
+  city: string
+  count: number
+}
 
 /** Маска телефона: любые вводимые цифры -> +7 XXX XXX-XX-XX */
 function formatPhone(raw: string): string {
@@ -63,12 +71,16 @@ export function Waitlist() {
   const [city, setCity] = useState('')
   const [loading, setLoading] = useState(false)
   const [count, setCount] = useState<number | null>(null)
+  const [cities, setCities] = useState<CityStat[]>([])
   const [joined, setJoined] = useState<{ position: number; message: string } | null>(null)
 
   useEffect(() => {
     fetch('/api/waitlist')
       .then((r) => r.json())
-      .then((d) => setCount(d.count ?? 0))
+      .then((d) => {
+        setCount(d.count ?? 0)
+        setCities(Array.isArray(d.cities) ? d.cities : [])
+      })
       .catch(() => setCount(0))
   }, [])
 
@@ -117,6 +129,7 @@ export function Waitlist() {
         return
       }
       setCount(d.count ?? count)
+      if (Array.isArray(d.cities)) setCities(d.cities)
       setJoined({ position: d.position ?? 0, message: d.message })
       toast({ title: 'Заявка принята', description: d.message })
     } catch {
@@ -167,10 +180,19 @@ export function Waitlist() {
         >
           <div className="flex items-end justify-between text-sm">
             <span className="flex items-center gap-1.5 font-semibold text-zinc-300">
-              <Users className="h-4 w-4 text-emerald-400" />
-              {count !== null
-                ? `${num(count)} ${plural(count, 'заявка', 'заявки', 'заявок')}`
-                : 'загружаем…'}
+              <Users className="h-4 w-4 text-emerald-400" aria-hidden />
+              {count !== null ? (
+                <>
+                  <CountUp
+                    value={count}
+                    className="font-bold text-emerald-400"
+                    srLabel={`${num(count)} ${plural(count, 'заявка', 'заявки', 'заявок')}`}
+                  />{' '}
+                  {plural(count, 'заявка', 'заявки', 'заявок')}
+                </>
+              ) : (
+                'загружаем…'
+              )}
             </span>
             <span className="text-zinc-500">цель — {num(BASE_TARGET)}</span>
           </div>
@@ -184,11 +206,78 @@ export function Waitlist() {
             />
           </div>
           <p className="mt-1.5 text-right text-xs tabular-nums text-zinc-500">
-            {BASE_TARGET - (count ?? 0) > 0
-              ? `осталось ${num(BASE_TARGET - (count ?? 0))} мест`
-              : 'места первой волны заполнены'}
+            {BASE_TARGET - (count ?? 0) > 0 ? (
+              <>
+                осталось{' '}
+                <CountUp
+                  value={BASE_TARGET - (count ?? 0)}
+                  className="font-semibold text-zinc-300"
+                  srLabel={`осталось ${num(BASE_TARGET - (count ?? 0))} мест`}
+                />{' '}
+                мест
+              </>
+            ) : (
+              'места первой волны заполнены'
+            )}
           </p>
         </motion.div>
+
+        {/* Города первой волны: живые заявки из базы демо */}
+        {cities.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-40px' }}
+            transition={{ duration: 0.5, delay: 0.15 }}
+            className="mx-auto mt-6 max-w-2xl rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 backdrop-blur"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="flex items-center gap-2 text-sm font-bold text-white">
+                <MapPin className="h-4 w-4 text-amber-400" aria-hidden />
+                Города первой волны
+              </h3>
+              <span className="text-[11px] text-zinc-500">
+                живые заявки из базы демо — без накруток
+              </span>
+            </div>
+            <p className="mt-1.5 text-xs leading-relaxed text-zinc-500">
+              Город запускается, когда из него набирается {CITY_TARGET} заявок. Пока скромно — но
+              каждая заявка приближает запуск своего города.
+            </p>
+            <div className="mt-4 grid gap-x-6 gap-y-3.5 sm:grid-cols-2">
+              {cities.map((c) => {
+                const pct = Math.max(1.5, Math.min(100, (c.count / CITY_TARGET) * 100))
+                return (
+                  <div key={c.city}>
+                    <div className="flex items-baseline justify-between gap-2 text-xs">
+                      <span className="truncate font-semibold text-zinc-200">{c.city}</span>
+                      <span className="shrink-0 tabular-nums text-zinc-500">
+                        <span className="font-bold text-emerald-300">{num(c.count)}</span> из{' '}
+                        {CITY_TARGET}
+                      </span>
+                    </div>
+                    <div
+                      className="mt-1 h-1.5 overflow-hidden rounded-full bg-zinc-800/80"
+                      role="progressbar"
+                      aria-label={`${c.city}: ${c.count} из ${CITY_TARGET} заявок`}
+                      aria-valuemin={0}
+                      aria-valuemax={CITY_TARGET}
+                      aria-valuenow={c.count}
+                    >
+                      <motion.div
+                        initial={{ width: 0 }}
+                        whileInView={{ width: `${pct}%` }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.7, ease: 'easeOut' }}
+                        className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-amber-400"
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </motion.div>
+        )}
 
         <div className="mt-12 grid gap-6 lg:grid-cols-[1fr_minmax(0,460px)]">
           {/* Преимущества */}

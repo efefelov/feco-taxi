@@ -5,12 +5,16 @@ import { motion, useInView } from 'framer-motion'
 import { ArrowDown, BadgePercent, ShieldCheck, Timer, ReceiptText, TrendingDown, Users, Radio } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { rub, num, plural } from '@/lib/pryamo/format'
+import { CountUp } from '@/components/pryamo/count-up'
 import { OnboardingTrigger } from '@/components/pryamo/onboarding'
 import { useEngineStatus } from '@/lib/pryamo/socket'
 
 // Оценка переплат водителями агрегаторам за день:
 // ~9,3 млн поездок/день × 450 ₽ средний чек × ~40% совокупных потерь ≈ 1,68 млрд ₽/день
 const DAILY_OVERPAY = 1_676_000_000
+
+/** Формат счётчика «млрд ₽» — модульная константа для стабильной ссылки в CountUp */
+const formatBillion = (v: number) => `~${v.toFixed(2).replace('.', ',')} млрд ₽`
 
 function dayFraction(): number {
   const now = new Date()
@@ -438,7 +442,7 @@ export function Hero() {
                 с ПРЯМО оставалось бы водителям
               </p>
               <p className="mt-1 text-2xl font-black tabular-nums text-emerald-400">
-                ~1,34 млрд ₽
+                <CountUp value={1.34} duration={1.4} format={formatBillion} srLabel="около 1,34 млрд ₽" />
               </p>
               <p className="text-[11px] text-emerald-500/80">каждый день</p>
             </div>
