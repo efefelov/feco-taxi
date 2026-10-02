@@ -129,6 +129,7 @@ export function Faq() {
   const [query, setQuery] = useState('')
   const [openItems, setOpenItems] = useState<string[]>([])
   const [copied, setCopied] = useState(false)
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
   const normQuery = normalize(query)
 
   const filtered = useMemo(() => filterFaqs(normQuery), [normQuery])
@@ -142,24 +143,43 @@ export function Faq() {
     setOpenItems(matched.map((f) => `item-${FAQS.indexOf(f)}`))
   }
 
-  // Deep link: ?q=комиссия — применяем запрос из URL при монтировании.
+  // Deep links: ?q=комиссия — поиск из URL; #faq-q-N — конкретный вопрос.
   // URL — внешняя система: читаем асинхронно после гидратации, чтобы не
   // каскадить рендеры и не создать hydration mismatch.
   useEffect(() => {
     const q = new URLSearchParams(window.location.search).get('q')
-    if (!q || !q.trim()) return
-    const next = q.trim().slice(0, 60)
-    const t = window.setTimeout(() => applyQuery(next), 0)
-    return () => clearTimeout(t)
+    if (q && q.trim()) {
+      const next = q.trim().slice(0, 60)
+      const t = window.setTimeout(() => applyQuery(next), 0)
+      return () => clearTimeout(t)
+    }
+    const m = window.location.hash.match(/^#faq-q-(\d+)$/)
+    if (m) {
+      const idx = Number(m[1])
+      if (Number.isInteger(idx) && idx >= 0 && idx < FAQS.length) {
+        const t = window.setTimeout(() => setOpenItems([`item-${idx}`]), 0)
+        return () => clearTimeout(t)
+      }
+    }
   }, [])
 
-  // Ссылка на текущий поиск — для шаринга конкретного ответа
+  // Ссылка на текущий поиск — для шаринга набора ответов
   const shareSearch = async () => {
     const url = `${window.location.origin}${window.location.pathname}?q=${encodeURIComponent(query)}#faq`
     const ok = await copyText(url)
     if (ok) {
       setCopied(true)
       window.setTimeout(() => setCopied(false), 2500)
+    }
+  }
+
+  // Ссылка на конкретный вопрос — для шаринга одного ответа
+  const shareQuestion = async (idx: number) => {
+    const url = `${window.location.origin}${window.location.pathname}#faq-q-${idx}`
+    const ok = await copyText(url)
+    if (ok) {
+      setCopiedIdx(idx)
+      window.setTimeout(() => setCopiedIdx((cur) => (cur === idx ? null : cur)), 2500)
     }
   }
 
@@ -308,7 +328,8 @@ export function Faq() {
                       <AccordionItem
                         key={idx}
                         value={`item-${idx}`}
-                        className="rounded-2xl border border-zinc-200 bg-white px-5 shadow-sm transition-all duration-200 hover:border-zinc-300 hover:shadow-md data-[state=open]:border-emerald-300/70 data-[state=open]:shadow-md"
+                        id={`faq-q-${idx}`}
+                        className="scroll-mt-28 rounded-2xl border border-zinc-200 bg-white px-5 shadow-sm transition-all duration-200 hover:border-zinc-300 hover:shadow-md data-[state=open]:border-emerald-300/70 data-[state=open]:shadow-md"
                       >
                         <AccordionTrigger className="py-4 text-left text-base font-bold text-zinc-900 hover:no-underline">
                           <span className="flex items-start gap-2.5">
@@ -327,6 +348,25 @@ export function Faq() {
                         </AccordionTrigger>
                         <AccordionContent className="pb-5 pl-8 text-sm leading-relaxed text-zinc-600">
                           {f.a}
+                          <div className="mt-3 border-t border-zinc-100 pt-2.5">
+                            <button
+                              onClick={() => shareQuestion(idx)}
+                              aria-label={`Скопировать ссылку на вопрос: ${f.q}`}
+                              className={cn(
+                                'inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[11px] font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50',
+                                copiedIdx === idx
+                                  ? 'bg-emerald-50 text-emerald-700'
+                                  : 'text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700'
+                              )}
+                            >
+                              {copiedIdx === idx ? (
+                                <Check className="h-3 w-3" aria-hidden="true" />
+                              ) : (
+                                <Link2 className="h-3 w-3" aria-hidden="true" />
+                              )}
+                              {copiedIdx === idx ? 'Ссылка скопирована' : 'Ссылка на этот вопрос'}
+                            </button>
+                          </div>
                         </AccordionContent>
                       </AccordionItem>
                     )

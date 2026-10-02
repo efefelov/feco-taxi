@@ -16,6 +16,7 @@ import {
   HandCoins,
   RotateCcw,
   BadgeCheck,
+  Scale,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -444,6 +445,33 @@ export function PassengerDemo() {
                     {rub(receipt.driverPayout + receipt.tip)}
                   </span>
                 </div>
+              </div>
+
+              {/* Оценка той же поездки у монополиста — честно помечаем как оценку */}
+              <div className="mt-3 rounded-xl border border-amber-400/25 bg-amber-400/5 p-3.5">
+                <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-300">
+                  <Scale className="h-3.5 w-3.5" aria-hidden="true" />
+                  А если бы у монополиста?
+                </p>
+                <div className="mt-2 flex items-baseline justify-between gap-2 text-xs">
+                  <span className="text-zinc-400">
+                    вечерний пик, спрос без капа — оценка ×1,6
+                  </span>
+                  <span className="text-sm font-bold tabular-nums text-zinc-500 line-through decoration-rose-400/80 decoration-2">
+                    {rub(Math.round((receipt.price * 1.6) / 10) * 10)}
+                  </span>
+                </div>
+                <div className="mt-1 flex items-baseline justify-between gap-2 text-xs">
+                  <span className="text-zinc-400">вы заплатили — фикс до конца</span>
+                  <span className="text-sm font-bold tabular-nums text-zinc-300">
+                    {rub(receipt.price)}
+                  </span>
+                </div>
+                <p className="mt-2 border-t border-amber-400/15 pt-2 text-[11px] leading-relaxed text-zinc-400">
+                  У монополиста коэффициент спроса не ограничен и цена может пересчитаться
+                  в пути. Наш кап — ×1,5, и весь коэффициент достаётся водителю, а не
+                  агрегатору.
+                </p>
               </div>
 
               {/* Рейтинг 2.0 */}

@@ -14,6 +14,35 @@ import type {
 
 // ===== Хелперы-подписки =====
 
+/**
+ * Лёгкий статус демо-движка для навигации и hero:
+ * одно соединение без входа в комнаты — движок рассылает stats:live всем.
+ * Переподключается бесконечно, чтобы статус всегда был честным.
+ */
+export function useEngineStatus() {
+  const [connected, setConnected] = useState(false)
+  const [stats, setStats] = useState<LiveStats | null>(null)
+
+  useEffect(() => {
+    const s = io('/?XTransformPort=3003', {
+      transports: ['websocket', 'polling'],
+      forceNew: true,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1500,
+    })
+    s.on('connect', () => setConnected(true))
+    s.on('disconnect', () => setConnected(false))
+    s.on('connect_error', () => setConnected(false))
+    s.on('stats:live', (d: LiveStats) => setStats(d))
+    return () => {
+      s.disconnect()
+    }
+  }, [])
+
+  return { connected, stats }
+}
+
 /** Запись в журнале ленты: судьба заказа после исчезновения из общего фида */
 export interface FeedHistoryEntry {
   id: string

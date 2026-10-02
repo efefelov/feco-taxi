@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { motion, useInView } from 'framer-motion'
-import { ArrowDown, BadgePercent, ShieldCheck, Timer, ReceiptText, TrendingDown, Users } from 'lucide-react'
+import { ArrowDown, BadgePercent, ShieldCheck, Timer, ReceiptText, TrendingDown, Users, Radio } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { rub, plural } from '@/lib/pryamo/format'
+import { rub, num, plural } from '@/lib/pryamo/format'
 import { OnboardingTrigger } from '@/components/pryamo/onboarding'
+import { useEngineStatus } from '@/lib/pryamo/socket'
 
 // Оценка переплат водителями агрегаторам за день:
 // ~9,3 млн поездок/день × 450 ₽ средний чек × ~40% совокупных потерь ≈ 1,68 млрд ₽/день
@@ -230,6 +231,7 @@ function ReceiptCard({
 export function Hero() {
   const { value, ref } = useOverpayCounter()
   const [waveCount, setWaveCount] = useState<number | null>(null)
+  const { stats: engineStats } = useEngineStatus()
 
   // Живой счётчик первой волны (соцдоказательство)
   useEffect(() => {
@@ -334,6 +336,24 @@ export function Hero() {
                     <span className="font-bold text-emerald-400">{waveCount}</span>{' '}
                     {plural(waveCount, 'водитель', 'водителя', 'водителей')} уже в списке первой
                     волны
+                  </span>
+                </p>
+              )}
+              {engineStats && engineStats.onlineDrivers > 0 && (
+                <p className="mt-1.5 flex items-center gap-1.5 text-xs text-zinc-500">
+                  <Radio className="h-3.5 w-3.5 animate-pulse text-emerald-400" aria-hidden />
+                  <span>
+                    движок демо в этот момент:{' '}
+                    <span className="font-bold text-zinc-300">
+                      {num(engineStats.onlineDrivers)}{' '}
+                      {plural(engineStats.onlineDrivers, 'водитель', 'водителя', 'водителей')}
+                    </span>{' '}
+                    онлайн ·{' '}
+                    <span className="font-bold text-zinc-300">
+                      {num(engineStats.completedToday)}{' '}
+                      {plural(engineStats.completedToday, 'поездка', 'поездки', 'поездок')}
+                    </span>{' '}
+                    завершено
                   </span>
                 </p>
               )}

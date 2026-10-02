@@ -235,7 +235,7 @@ function TariffCard({ tariff, distanceKm, durationMin }: { tariff: Tariff; dista
           <p className="text-[11px] text-zinc-400">Фикс до конца поездки · чаевые сверх цены</p>
           <button
             onClick={() => pickTariffInDemo(tariff.id)}
-            className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-bold text-emerald-700 transition-colors hover:bg-emerald-50 hover:text-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
+            className="inline-flex shrink-0 items-center gap-1 rounded-lg px-3 py-2 -m-1 text-[11px] font-bold text-emerald-700 transition-colors hover:bg-emerald-50 hover:text-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
             aria-label={`Попробовать тариф ${tariff.name} в живом демо`}
           >
             В демо

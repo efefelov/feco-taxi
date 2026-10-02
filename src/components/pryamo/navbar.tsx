@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Zap, Menu, X, ArrowRight, Radio } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { useEngineStatus } from '@/lib/pryamo/socket'
 
 const NAV = [
   { href: '#problem', label: 'Проблема' },
@@ -22,6 +23,7 @@ export function Navbar() {
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState<string>('')
   const activeRef = useRef('')
+  const { connected } = useEngineStatus()
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24)
@@ -108,9 +110,31 @@ export function Navbar() {
           </nav>
 
           <div className="hidden items-center gap-3 xl:flex">
-            <span className="flex items-center gap-1.5 text-xs font-medium text-zinc-400">
-              <Radio className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
-              движок демо: онлайн
+            <span
+              className={cn(
+                'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+                connected
+                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                  : 'border-amber-400/30 bg-amber-400/10 text-amber-300'
+              )}
+              role="status"
+              aria-live="polite"
+            >
+              <span className="relative flex h-1.5 w-1.5">
+                <span
+                  className={cn(
+                    'absolute inline-flex h-full w-full rounded-full opacity-60',
+                    connected ? 'animate-ping bg-emerald-400' : 'animate-pulse bg-amber-400'
+                  )}
+                />
+                <span
+                  className={cn(
+                    'relative inline-flex h-1.5 w-1.5 rounded-full',
+                    connected ? 'bg-emerald-400' : 'bg-amber-400'
+                  )}
+                />
+              </span>
+              {connected ? 'движок демо: онлайн' : 'движок: переподключение…'}
             </span>
             <Button
               asChild
@@ -145,6 +169,19 @@ export function Navbar() {
             aria-label="Мобильная навигация"
           >
             <div className="space-y-1 px-4 py-4">
+              <span
+                className={cn(
+                  'mb-2 flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium',
+                  connected ? 'text-emerald-300' : 'text-amber-300'
+                )}
+                role="status"
+                aria-live="polite"
+              >
+                <Radio
+                  className={cn('h-3.5 w-3.5', connected ? 'animate-pulse text-emerald-400' : 'text-amber-400')}
+                />
+                {connected ? 'движок демо: онлайн' : 'движок: переподключение…'}
+              </span>
               {NAV.map((n) => (
                 <a
                   key={n.href}
