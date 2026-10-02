@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Тарифы ПРЯМО
+model Tariff {
+  id          String  @id
+  name        String
+  description String
+  multiplier  Float
+  baseFare    Float // ₽ посадка
+  perKm       Float // ₽/км
+  perMin      Float // ₽/мин
+  carClass    String
+  emojiFree   Boolean @default(true) // без эмодзи-навязывания, поле-флаг "честный тариф"
+  sortOrder   Int     @default(0)
+}
+
+// Профили водителей для демо
+model DriverProfile {
+  id        String  @id
+  name      String
+  initials  String
+  car       String
+  plate     String
+  rating    Float   @default(4.9)
+  rides     Int     @default(0)
+  years     Int     @default(3)
+  isPro     Boolean @default(false) // подписка ПРЯМО Pro
+  city      String  @default("Москва")
+}
+
+// История поездок (для статистики и графиков)
+model RideRecord {
+  id           String   @id @default(cuid())
+  driverName   String
+  fromLabel    String
+  toLabel      String
+  distanceKm   Float
+  durationMin  Int
+  tariffName   String
+  priceTotal   Float // что заплатил пассажир
+  driverPayout Float // что получил водитель
+  commission   Float // наша комиссия (8% или 0 при Pro)
+  surge        Float   @default(1)
+  tip          Float   @default(0)
+  platform     String   @default("ПРЯМО")
+  createdAt    DateTime @default(now())
+}
+
+// Ключевые метрики рынка/платформы для секции "монополия под микроскопом"
+model MarketStat {
+  id      String @id
+  label   String
+  value   Float
+  unit    String
+  hint    String
+  source  String
+  tone    String @default("danger") // danger | success | neutral
+}

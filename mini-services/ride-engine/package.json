@@ -1,0 +1,15 @@
+{
+  "name": "ride-engine",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ПРЯМО ride-engine — WebSocket-симулятор живого рынка такси (порт 3003)",
+  "scripts": {
+    "dev": "bun --hot index.ts"
+  },
+  "dependencies": {
+    "socket.io": "^4.8.4"
+  },
+  "devDependencies": {
+    "bun-types": "^1.4.2"
+  }
+}

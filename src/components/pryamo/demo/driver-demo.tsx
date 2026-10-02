@@ -1,0 +1,444 @@
+'use client'
+
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
+import {
+  Radio,
+  TrendingUp,
+  Users,
+  Timer,
+  Package,
+  Banknote,
+  TrendingDown,
+  Flame,
+  MapPin,
+  CarFront,
+  Check,
+  Handshake,
+  ShieldCheck,
+} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+import { toast } from '@/hooks/use-toast'
+import { CityMap } from './city-map'
+import { useDemand, useDriverFeed, useDriverRide } from '@/lib/pryamo/socket'
+import { rub, num, plural } from '@/lib/pryamo/format'
+import type { OrderDTO, RideDTO } from '@/lib/pryamo/types'
+
+function timeLeft(expiresAt: string): number {
+  return Math.max(0, Math.round((+new Date(expiresAt) - Date.now()) / 1000))
+}
+
+export function DriverDemo() {
+  const [seen] = useState(() => new Set<string>())
+  const [driverRide, setDriverRide] = useState<RideDTO | null>(null)
+
+  const { orders, connected } = useDriverFeed((o) => {
+    if (!seen.has(o.id)) {
+      seen.add(o.id)
+      toast({
+        title: `Новый заказ: ${o.from.label} → ${o.to.label}`,
+        description: `${o.distanceKm} км · выплата ${rub(o.driverPayout)}`,
+      })
+    }
+  })
+
+  const { zones, stats } = useDemand()
+
+  const { accept, decline, earnings, lastRides } = useDriverRide({
+    onRideState: (r) => setDriverRide(r),
+    onCompleted: (r) => {
+      setDriverRide(r)
+      toast({
+        title: 'Поездка завершена',
+        description: `Выплата ${rub(r.driverPayout)} зачислена. Комиссия — только 8%.`,
+      })
+      setTimeout(() => setDriverRide(null), 6000)
+    },
+    onEarnings: () => {},
+    onAcceptFailed: (id, reason) => {
+      toast({
+        title: reason === 'taken' ? 'Успели раньше вас' : 'Заказ недоступен',
+        description: 'У нас это не штраф и не понижение приоритета. Просто не повезло.',
+      })
+    },
+  })
+
+  // Тикер времени истечения заказов
+  const [, forceTick] = useState(0)
+  useEffect(() => {
+    const t = setInterval(() => forceTick((v) => v + 1), 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  const bestZone = useMemo(() => {
+    if (!zones.length) return null
+    return [...zones].sort((a, b) => b.demand - a.demand)[0]
+  }, [zones])
+
+  const sortedOrders = useMemo(
+    () => [...orders].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)),
+    [orders]
+  )
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
+      {/* Левая колонка: лента заказов + активная поездка */}
+      <div className="flex flex-col gap-4">
+        {/* Статус подключения */}
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/70 px-5 py-3.5 backdrop-blur">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2.5 w-2.5">
+              <span
+                className={cn(
+                  'absolute inline-flex h-full w-full rounded-full opacity-60',
+                  connected ? 'animate-ping bg-emerald-400' : 'bg-rose-400'
+                )}
+              />
+              <span
+                className={cn(
+                  'relative inline-flex h-2.5 w-2.5 rounded-full',
+                  connected ? 'bg-emerald-400' : 'bg-rose-400'
+                )}
+              />
+            </span>
+            <span className="text-sm font-semibold text-zinc-200">
+              {connected ? 'Вы онлайн · заказы летят' : 'Переподключение…'}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-emerald-400" />
+            <span className="text-xs text-zinc-400">Отказ от заказа — без штрафа</span>
+          </div>
+        </div>
+
+        {/* Активная поездка водителя */}
+        <AnimatePresence>
+          {driverRide && (
+            <motion.div
+              key="driver-ride"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="rounded-2xl border border-emerald-500/40 bg-gradient-to-r from-emerald-500/12 to-zinc-900/70 p-5 backdrop-blur"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <CarFront className="h-5 w-5 text-emerald-400" />
+                  <h3 className="font-bold text-white">
+                    {driverRide.status === 'arriving'
+                      ? 'Едем к пассажиру'
+                      : driverRide.status === 'onboard'
+                        ? 'Пассажир в машине'
+                        : 'Завершено'}
+                  </h3>
+                </div>
+                <span className="rounded-lg bg-emerald-500/15 px-3 py-1 text-sm font-black tabular-nums text-emerald-300">
+                  {rub(driverRide.driverPayout)}
+                </span>
+              </div>
+              <p className="mt-2 text-sm text-zinc-400">
+                {driverRide.from.label} → {driverRide.to.label}
+              </p>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-zinc-800">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-amber-400 transition-all duration-1000"
+                  style={{ width: `${Math.round((driverRide.progress ?? 0) * 100)}%` }}
+                />
+              </div>
+              {driverRide.status === 'onboard' && (
+                <p className="mt-2 text-xs text-zinc-500">
+                  Осталось ~{driverRide.etaMin} мин · выплата фикс — не «оптимизируется»
+                </p>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Лента заказов */}
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5 backdrop-blur">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="flex items-center gap-2 text-lg font-bold text-white">
+              <Package className="h-5 w-5 text-emerald-400" />
+              Свободные заказы
+              <span className="rounded-lg bg-zinc-800 px-2 py-0.5 text-sm font-black tabular-nums text-emerald-300">
+                {sortedOrders.length}
+              </span>
+            </h3>
+            <span className="text-xs text-zinc-500">первый взял — первый поехал</span>
+          </div>
+
+          <div className="feed-scroll max-h-[26rem] space-y-3 overflow-y-auto pr-2">
+            <AnimatePresence initial={false}>
+              {sortedOrders.map((o) => (
+                <OrderCard key={o.id} order={o} onAccept={() => accept(o.id)} onDecline={() => decline(o.id)} />
+              ))}
+            </AnimatePresence>
+            {sortedOrders.length === 0 && (
+              <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-zinc-700 text-sm text-zinc-500">
+                {connected ? 'Ожидаем заказы… обычно каждые 5–10 секунд' : 'Подключаемся к движку…'}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Правая колонка: доход + спрос + платформа */}
+      <div className="flex flex-col gap-4">
+        {/* Доход за смену */}
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5 backdrop-blur">
+          <h3 className="flex items-center gap-2 text-lg font-bold text-white">
+            <Banknote className="h-5 w-5 text-emerald-400" />
+            Смена сегодня
+          </h3>
+          {earnings ? (
+            <>
+              <div className="mt-3 flex items-baseline justify-between">
+                <div>
+                  <p className="text-xs text-zinc-500">Выплата на руки</p>
+                  <p className="text-3xl font-black tabular-nums text-emerald-400">
+                    {rub(earnings.payout)}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-zinc-500">оборота</p>
+                  <p className="text-xl font-bold tabular-nums text-zinc-300">{rub(earnings.gross)}</p>
+                </div>
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                <div className="rounded-lg bg-zinc-950/60 p-2.5">
+                  <p className="text-base font-black tabular-nums text-white">{earnings.rides}</p>
+                  <p className="text-[10px] uppercase text-zinc-500">поездок</p>
+                </div>
+                <div className="rounded-lg bg-zinc-950/60 p-2.5">
+                  <p className="text-base font-black tabular-nums text-white">
+                    {earnings.hoursOnline.toFixed(1)}
+                  </p>
+                  <p className="text-[10px] uppercase text-zinc-500">часов</p>
+                </div>
+                <div className="rounded-lg bg-zinc-950/60 p-2.5">
+                  <p className="text-base font-black tabular-nums text-rose-300">
+                    {rub(earnings.commission)}
+                  </p>
+                  <p className="text-[10px] uppercase text-zinc-500">комиссия</p>
+                </div>
+              </div>
+
+              {lastRides.length > 0 && (
+                <div className="mt-4 space-y-1.5 border-t border-zinc-800 pt-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                    Последние поездки
+                  </p>
+                  {lastRides.slice(0, 4).map((r, i) => (
+                    <div key={r.id ?? i} className="flex items-center justify-between text-xs">
+                      <span className="max-w-44 truncate text-zinc-400">
+                        <Check className="mr-1 inline h-3 w-3 text-emerald-500" />
+                        {r.from?.label} → {r.to?.label}
+                      </span>
+                      <span className="font-bold tabular-nums text-emerald-400">
+                        {rub(r.driverPayout)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-3 rounded-lg border border-rose-500/20 bg-rose-500/5 p-2.5 text-[11px] text-zinc-400">
+                У монополиста с такого же оборота{' '}
+                <strong className="text-rose-300">{rub(Math.round(earnings.gross * 0.4))}</strong>{' '}
+                забрал бы агрегатор. У нас — {rub(earnings.commission)}.
+                <span className="ml-1 font-bold text-emerald-300">
+                  +{rub(Math.round(earnings.gross * 0.4 - earnings.commission))} в вашу пользу.
+                </span>
+              </div>
+            </>
+          ) : (
+            <p className="mt-3 text-sm text-zinc-500">Загружаем данные смены…</p>
+          )}
+        </div>
+
+        {/* Живая карта спроса */}
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5 backdrop-blur">
+          <h3 className="mb-3 flex items-center gap-2 text-lg font-bold text-white">
+            <Flame className="h-5 w-5 text-amber-400" />
+            Живой спрос по зонам
+          </h3>
+          <CityMap variant="demand" zones={zones} className="aspect-[5/3]" />
+          {zones.length > 0 && (
+            <div className="mt-3 space-y-2">
+              {zones.map((z) => (
+                <div key={z.id} className="flex items-center gap-3 text-xs">
+                  <span className="w-16 shrink-0 font-semibold text-zinc-300">{z.name}</span>
+                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-zinc-800">
+                    <div
+                      className="h-full rounded-full transition-all duration-700"
+                      style={{
+                        width: `${z.demand}%`,
+                        background:
+                          z.demand >= 75 ? '#f43f5e' : z.demand >= 55 ? '#f59e0b' : z.demand >= 35 ? '#eab308' : '#10b981',
+                      }}
+                    />
+                  </div>
+                  <span className="w-28 shrink-0 text-right tabular-nums text-zinc-500">
+                    {z.ordersWaiting} зак. · ~{z.avgWaitMin} мин
+                  </span>
+                </div>
+              ))}
+              {bestZone && (
+                <div className="mt-3 flex items-start gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/8 p-3 text-xs text-emerald-200">
+                  <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                  <span>
+                    Совет часа: зона <strong>{bestZone.name}</strong> — спрос {bestZone.demand}%,{' '}
+                    {bestZone.waitingDrivers} {plural(bestZone.waitingDrivers, 'водитель', 'водителя', 'водителей')}{' '}
+                    в очереди. Если x{bestZone.surge.toFixed(1)} — ваша доля вырастет вместе с коэффициентом.
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Статистика платформы */}
+        {stats && (
+          <div className="grid grid-cols-2 gap-3">
+            <StatTile
+              icon={Users}
+              label="водителей онлайн"
+              value={num(stats.onlineDrivers)}
+              accent="text-white"
+            />
+            <StatTile
+              icon={Radio}
+              label="заказов в час"
+              value={num(stats.ordersPerHour)}
+              accent="text-white"
+            />
+            <StatTile
+              icon={Timer}
+              label="среднее ожидание"
+              value={`${Math.round(stats.avgWaitSec / 60)} мин`}
+              accent="text-white"
+            />
+            <StatTile
+              icon={TrendingDown}
+              label="завершено сегодня"
+              value={num(stats.completedToday)}
+              accent="text-emerald-300"
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function OrderCard({
+  order,
+  onAccept,
+  onDecline,
+}: {
+  order: OrderDTO
+  onAccept: () => void
+  onDecline: () => void
+}) {
+  const left = timeLeft(order.expiresAt)
+  const total = Math.max(
+    1,
+    Math.round((+new Date(order.expiresAt) - +new Date(order.createdAt)) / 1000)
+  )
+  const leftPct = Math.min(100, Math.round((left / total) * 100))
+
+  return (
+    <motion.article
+      layout
+      initial={{ opacity: 0, y: 14, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.18 } }}
+      transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+      className="group rounded-xl border border-zinc-700/80 bg-zinc-950/60 p-4 transition-colors hover:border-emerald-500/40"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+            <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-300">{order.tariff.name}</span>
+            {order.surge > 1.05 && (
+              <span className="rounded bg-amber-400/15 px-1.5 py-0.5 text-amber-300">
+                спрос ×{order.surge.toFixed(1)}
+              </span>
+            )}
+            <span>{order.distanceKm} км · {order.durationMin} мин</span>
+          </div>
+          <p className="mt-1.5 flex items-center gap-1 truncate text-sm font-semibold text-zinc-200">
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+            {order.from.label}
+          </p>
+          <p className="flex items-center gap-1 truncate text-sm text-zinc-400">
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+            {order.to.label}
+          </p>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="text-2xl font-black tabular-nums leading-none text-emerald-400">
+            {rub(order.driverPayout)}
+          </p>
+          <p className="mt-1 text-[11px] text-zinc-500">
+            чек {rub(order.priceTotal)} · −8%
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-3 flex items-center gap-3">
+        <div className="h-1 flex-1 overflow-hidden rounded-full bg-zinc-800">
+          <div
+            className={cn(
+              'h-full rounded-full transition-all duration-1000',
+              leftPct > 40 ? 'bg-emerald-500' : leftPct > 15 ? 'bg-amber-400' : 'bg-rose-500'
+            )}
+            style={{ width: `${leftPct}%` }}
+          />
+        </div>
+        <span className="text-[11px] tabular-nums text-zinc-500">{left} с</span>
+      </div>
+
+      <div className="mt-3 flex gap-2 opacity-90 transition-opacity group-hover:opacity-100">
+        <Button
+          onClick={onAccept}
+          size="sm"
+          className="h-9 flex-1 bg-emerald-500 font-bold text-zinc-950 hover:bg-emerald-400"
+        >
+          <Handshake className="mr-1.5 h-4 w-4" />
+          Взять за {rub(order.driverPayout)}
+        </Button>
+        <Button
+          onClick={onDecline}
+          size="sm"
+          variant="outline"
+          className="h-9 border-zinc-700 px-3 text-zinc-500 hover:text-zinc-300"
+          aria-label="Пропустить заказ без штрафа"
+        >
+          Мимо
+        </Button>
+      </div>
+    </motion.article>
+  )
+}
+
+function StatTile({
+  icon: Icon,
+  label,
+  value,
+  accent,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  value: string
+  accent: string
+}) {
+  return (
+    <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3.5">
+      <Icon className="h-4 w-4 text-emerald-400" />
+      <p className={cn('mt-1.5 text-xl font-black tabular-nums', accent)}>{value}</p>
+      <p className="text-[10px] uppercase tracking-wide text-zinc-500">{label}</p>
+    </div>
+  )
+}
