@@ -40,6 +40,102 @@ function useOverpayCounter() {
   return { value, ref }
 }
 
+/**
+ * Профиль интенсивности поездок по часам (0–23): ночь тише,
+ * утренний и вечерний часы пик круче.
+ */
+const HOUR_RATES = [
+  0.32, 0.24, 0.18, 0.14, 0.18, 0.36, 0.78, 1.55, 2.15, 1.9, 1.4, 1.15, 1.05,
+  1.08, 1.18, 1.3, 1.62, 2.1, 2.28, 1.85, 1.48, 1.15, 0.78, 0.5,
+]
+
+/** Кумулятивная доля переплат, накопленная к моменту fraction суток (0..1) */
+function cumulativeAt(fraction: number): number {
+  const total = HOUR_RATES.reduce((a, b) => a + b, 0)
+  const hours = Math.min(24, Math.max(0, fraction * 24))
+  const full = Math.floor(hours)
+  let acc = HOUR_RATES.slice(0, full).reduce((a, b) => a + b, 0)
+  if (full < 24) acc += (hours - full) * (HOUR_RATES[full] ?? 0)
+  return acc / total
+}
+
+/**
+ * Дневная кривая переплат: сплошная — с полуночи до «сейчас»,
+ * пунктир — прогноз до конца суток (капитал дня ×1,68 млрд ₽).
+ * Живая точка отмечает текущее время.
+ */
+function OverpayDayCurve({ fraction }: { fraction: number }) {
+  const w = 200
+  const h = 44
+  const steps = 96 // точки каждые 15 минут
+  const f = Math.min(1, Math.max(0, fraction))
+  const nowIdx = Math.round(f * steps)
+
+  const pointAt = (i: number): [number, number] => {
+    const x = (i / steps) * w
+    const y = h - 5 - cumulativeAt(i / steps) * (h - 12)
+    return [x, y]
+  }
+
+  const pastPts: string[] = []
+  for (let i = 0; i <= nowIdx; i++) {
+    const [x, y] = pointAt(i)
+    pastPts.push(`${x.toFixed(1)},${y.toFixed(1)}`)
+  }
+  const futurePts: string[] = []
+  for (let i = nowIdx; i <= steps; i++) {
+    const [x, y] = pointAt(i)
+    futurePts.push(`${x.toFixed(1)},${y.toFixed(1)}`)
+  }
+  const [dotX, dotY] = pointAt(nowIdx)
+  const area = `M0,${h} L${pastPts.join(' L')} L${dotX.toFixed(1)},${h} Z`
+
+  return (
+    <svg
+      viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio="none"
+      className="mt-3 h-11 w-full max-w-md"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id="day-curve-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#f43f5e" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {/* прогноз до полуночи */}
+      <polyline
+        points={futurePts.join(' ')}
+        fill="none"
+        stroke="#f43f5e"
+        strokeOpacity="0.35"
+        strokeWidth="1.25"
+        strokeDasharray="3 3"
+        vectorEffect="non-scaling-stroke"
+      />
+      {/* накоплено с полуночи */}
+      <path d={area} fill="url(#day-curve-fill)" />
+      <polyline
+        points={pastPts.join(' ')}
+        fill="none"
+        stroke="#fb7185"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
+      />
+      {/* живая точка «сейчас» */}
+      <circle
+        cx={dotX}
+        cy={dotY}
+        r="2.6"
+        fill="#fb7185"
+        className="animate-pulse"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  )
+}
+
 interface ReceiptRow {
   label: string
   value: string
@@ -307,6 +403,7 @@ export function Hero() {
                 >
                   {rub(value)}
                 </p>
+                {value > 0 && <OverpayDayCurve fraction={value / DAILY_OVERPAY} />}
                 <p className="sr-only" aria-live="polite">
                   Оценка переплат водителей агрегаторам за сегодня: примерно {rub(DAILY_OVERPAY)} за
                   полный день.

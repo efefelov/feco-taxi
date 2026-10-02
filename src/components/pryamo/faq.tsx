@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Accordion,
@@ -8,7 +8,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion'
-import { HelpCircle, Search, X, SearchX, MessageSquare, ArrowRight } from 'lucide-react'
+import { HelpCircle, Search, X, SearchX, MessageSquare, ArrowRight, Link2, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface FaqItem {
@@ -103,9 +103,32 @@ function filterFaqs(nq: string): FaqItem[] {
   })
 }
 
+/** Копирование в буфер с fallback для контекстов без Clipboard API */
+async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch {
+    try {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      const ok = document.execCommand('copy')
+      document.body.removeChild(ta)
+      return ok
+    } catch {
+      return false
+    }
+  }
+}
+
 export function Faq() {
   const [query, setQuery] = useState('')
   const [openItems, setOpenItems] = useState<string[]>([])
+  const [copied, setCopied] = useState(false)
   const normQuery = normalize(query)
 
   const filtered = useMemo(() => filterFaqs(normQuery), [normQuery])
@@ -117,6 +140,27 @@ export function Faq() {
     setQuery(next)
     const matched = filterFaqs(normalize(next))
     setOpenItems(matched.map((f) => `item-${FAQS.indexOf(f)}`))
+  }
+
+  // Deep link: ?q=комиссия — применяем запрос из URL при монтировании.
+  // URL — внешняя система: читаем асинхронно после гидратации, чтобы не
+  // каскадить рендеры и не создать hydration mismatch.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get('q')
+    if (!q || !q.trim()) return
+    const next = q.trim().slice(0, 60)
+    const t = window.setTimeout(() => applyQuery(next), 0)
+    return () => clearTimeout(t)
+  }, [])
+
+  // Ссылка на текущий поиск — для шаринга конкретного ответа
+  const shareSearch = async () => {
+    const url = `${window.location.origin}${window.location.pathname}?q=${encodeURIComponent(query)}#faq`
+    const ok = await copyText(url)
+    if (ok) {
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2500)
+    }
   }
 
   return (
@@ -188,10 +232,27 @@ export function Faq() {
               )
             })}
             {hasQuery && (
-              <span className="ml-auto text-xs font-medium text-zinc-400" aria-live="polite">
-                {filtered.length > 0
-                  ? `Найдено: ${filtered.length} ${pluralQuestions(filtered.length)}`
-                  : 'Ничего не нашлось'}
+              <span className="ml-auto flex items-center gap-2">
+                <span className="text-xs font-medium text-zinc-400" aria-live="polite">
+                  {filtered.length > 0
+                    ? `Найдено: ${filtered.length} ${pluralQuestions(filtered.length)}`
+                    : 'Ничего не нашлось'}
+                </span>
+                {filtered.length > 0 && (
+                  <button
+                    onClick={shareSearch}
+                    aria-label="Скопировать ссылку на этот поиск"
+                    className={cn(
+                      'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50',
+                      copied
+                        ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                        : 'border-zinc-200 bg-white text-zinc-500 hover:border-emerald-400 hover:text-emerald-700'
+                    )}
+                  >
+                    {copied ? <Check className="h-3 w-3" /> : <Link2 className="h-3 w-3" />}
+                    {copied ? 'Скопировано' : 'Ссылка'}
+                  </button>
+                )}
               </span>
             )}
           </div>

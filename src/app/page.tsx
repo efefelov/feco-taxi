@@ -5,9 +5,11 @@ import { Hero } from '@/components/pryamo/hero'
 import { MarketSection } from '@/components/pryamo/market'
 import { PainPoints } from '@/components/pryamo/pain-points'
 import { Comparison } from '@/components/pryamo/comparison'
+import { TariffsSection } from '@/components/pryamo/tariffs'
 import { MoneyFlow } from '@/components/pryamo/money-flow'
 import { Testimonials } from '@/components/pryamo/testimonials'
 import { DemoSection } from '@/components/pryamo/demo'
+import { AuctionSection } from '@/components/pryamo/auction'
 import { IncomeCalculator } from '@/components/pryamo/calculator'
 import { Monetization } from '@/components/pryamo/monetization'
 import { RatingSection } from '@/components/pryamo/rating'
@@ -26,9 +28,11 @@ export default function Home() {
         <MarketSection />
         <PainPoints />
         <Comparison />
+        <TariffsSection />
         <MoneyFlow />
         <Testimonials />
         <DemoSection />
+        <AuctionSection />
         <IncomeCalculator />
         <Monetization />
         <RatingSection />

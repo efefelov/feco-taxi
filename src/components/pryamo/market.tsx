@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, animate, useInView } from 'framer-motion'
+import { useRef } from 'react'
 import { Microscope, AlertTriangle, CheckCircle2, Minus } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { MarketStat } from '@/lib/pryamo/types'
@@ -79,6 +80,28 @@ export function MarketSection() {
 }
 
 function StatCard({ stat }: { stat: MarketStat }) {
+  const valueRef = useRef<HTMLParagraphElement>(null)
+  const cardRef = useRef<HTMLDivElement>(null)
+  const inView = useInView(cardRef, { once: true, margin: '-60px' })
+
+  const decimals = Number.isInteger(stat.value) ? 0 : 1
+
+  // Count-up: цифра «набегает» при первом появлении карточки в вьюпорте
+  useEffect(() => {
+    if (!inView || !valueRef.current) return
+    const node = valueRef.current
+    const controls = animate(0, stat.value, {
+      duration: 1.1,
+      ease: [0.16, 1, 0.3, 1],
+      onUpdate: (v) => {
+        node.textContent =
+          decimals === 0
+            ? Math.round(v).toLocaleString('ru-RU')
+            : v.toFixed(decimals).replace('.', ',')
+      },
+    })
+    return () => controls.stop()
+  }, [inView, stat.value, decimals])
   const tone =
     stat.tone === 'danger'
       ? 'border-rose-200/70 bg-rose-50/40'
@@ -104,6 +127,7 @@ function StatCard({ stat }: { stat: MarketStat }) {
 
   return (
     <div
+      ref={cardRef}
       className={cn(
         'group h-full rounded-2xl border p-5 transition-shadow hover:shadow-lg hover:shadow-zinc-200/60',
         tone
@@ -114,7 +138,11 @@ function StatCard({ stat }: { stat: MarketStat }) {
         <span className="shrink-0 rounded-xl bg-white/80 p-2 shadow-sm">{icon}</span>
       </div>
       <p className={cn('mt-3 text-4xl font-black tabular-nums tracking-tight', valueColor)}>
-        {stat.value.toLocaleString('ru-RU')}
+        <span ref={valueRef}>
+          {decimals === 0
+            ? stat.value.toLocaleString('ru-RU')
+            : stat.value.toFixed(decimals).replace('.', ',')}
+        </span>
         <span className="ml-1 text-lg font-bold">{stat.unit}</span>
       </p>
       <p className="mt-2 text-sm text-zinc-600">{stat.hint}</p>
