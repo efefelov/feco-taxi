@@ -66,6 +66,26 @@ export function PassengerDemo() {
   const [tip, setTip] = useState(0)
   const [rated, setRated] = useState(false)
 
+  // Выбор класса из секции тарифов («В демо» на карточке) — глобальное событие
+  const pendingTariffRef = useRef<string | null>(null)
+  useEffect(() => {
+    const onPick = (e: Event) => {
+      const id = (e as CustomEvent<{ id: string }>).detail?.id
+      if (!id) return
+      if (tariffs.length > 0) {
+        const t = tariffs.find((x) => x.id === id)
+        if (t) {
+          setTariffId(t.id)
+          toast({ title: 'Класс выбран в демо', description: `${t.name} — цена уже пересчитана` })
+        }
+      } else {
+        pendingTariffRef.current = id
+      }
+    }
+    window.addEventListener('pryamo:tariff-pick', onPick)
+    return () => window.removeEventListener('pryamo:tariff-pick', onPick)
+  }, [tariffs])
+
   useEffect(() => {
     fetch('/api/tariffs')
       .then((r) => r.json())
@@ -73,6 +93,13 @@ export function PassengerDemo() {
         if (d.tariffs?.length) {
           setTariffs(d.tariffs)
           setTariffId(d.tariffs[1]?.id ?? d.tariffs[0]?.id)
+          // применяем отложенный выбор из секции тарифов, если список ещё не был готов
+          const pending = pendingTariffRef.current
+          if (pending) {
+            pendingTariffRef.current = null
+            const t = (d.tariffs as Tariff[]).find((x) => x.id === pending)
+            if (t) setTariffId(t.id)
+          }
         }
       })
       .catch(() => {})

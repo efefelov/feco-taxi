@@ -268,13 +268,13 @@ function AuctionPanel() {
               </div>
 
               {/* Боты-конкуренты с полосами реакции */}
-              <div className="mt-4 space-y-2">
+              <div className="mt-4 space-y-2.5">
                 {bots.map((b) => (
-                  <div key={b.id} className="flex items-center gap-2.5">
+                  <div key={b.id} className="flex items-center gap-2">
                     <span
                       className={cn(
-                        'w-24 shrink-0 truncate text-xs font-medium',
-                        b.grabbed ? 'text-rose-400' : 'text-zinc-400'
+                        'w-28 shrink-0 truncate text-xs font-medium',
+                        b.grabbed ? 'font-bold text-rose-400' : 'text-zinc-400'
                       )}
                     >
                       {b.name}
@@ -491,7 +491,7 @@ function QueuePanel() {
                 className={cn(
                   'flex items-center gap-2.5 rounded-lg border px-3 py-2',
                   isYou
-                    ? 'border-amber-500/50 bg-amber-500/10'
+                    ? 'border-amber-400/70 bg-amber-500/15 shadow-[inset_0_0_0_1px_rgba(251,191,36,0.08)]'
                     : 'border-zinc-800 bg-zinc-900/50'
                 )}
               >
@@ -502,7 +502,7 @@ function QueuePanel() {
                   )}
                 >
                   {isYou && (
-                    <span className="mr-1.5 rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-400">
+                    <span className="mr-1.5 rounded bg-amber-400 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-zinc-950">
                       Вы
                     </span>
                   )}

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { BadgeRussianRuble, Car, Gauge, MapPin, ShieldCheck } from 'lucide-react'
+import { BadgeRussianRuble, Car, Gauge, MapPin, ShieldCheck, ArrowRight } from 'lucide-react'
 import { Slider } from '@/components/ui/slider'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Tariff } from '@/lib/pryamo/types'
@@ -21,6 +21,12 @@ const FALLBACK: Tariff[] = [
 /** Длительность поездки по скорости города: ~27 км/ч + 3 мин на подачу/прогрев */
 function estimateDuration(distanceKm: number): number {
   return Math.max(4, Math.round(distanceKm / 27 * 60 + 3))
+}
+
+/** Глобальное событие: выбрать класс в демо пассажира (из секции тарифов) */
+function pickTariffInDemo(id: string) {
+  window.dispatchEvent(new CustomEvent('pryamo:tariff-pick', { detail: { id } }))
+  document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 export function TariffsSection() {
@@ -225,9 +231,17 @@ function TariffCard({ tariff, distanceKm, durationMin }: { tariff: Tariff; dista
             </span>
           </div>
         </div>
-        <p className="mt-2 text-[11px] text-zinc-400">
-          Фикс до конца поездки · чаевые сверх цены, 100% водителю
-        </p>
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <p className="text-[11px] text-zinc-400">Фикс до конца поездки · чаевые сверх цены</p>
+          <button
+            onClick={() => pickTariffInDemo(tariff.id)}
+            className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-bold text-emerald-700 transition-colors hover:bg-emerald-50 hover:text-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"
+            aria-label={`Попробовать тариф ${tariff.name} в живом демо`}
+          >
+            В демо
+            <ArrowRight className="h-3 w-3" aria-hidden />
+          </button>
+        </div>
       </div>
     </div>
   )

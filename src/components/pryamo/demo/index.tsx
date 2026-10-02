@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Play, User, CarFront } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -9,6 +9,13 @@ import { DriverDemo } from './driver-demo'
 
 export function DemoSection() {
   const [tab, setTab] = useState('passenger')
+
+  // Из секции тарифов пришёл выбор класса — переключаемся на пассажира
+  useEffect(() => {
+    const onPick = () => setTab('passenger')
+    window.addEventListener('pryamo:tariff-pick', onPick)
+    return () => window.removeEventListener('pryamo:tariff-pick', onPick)
+  }, [])
 
   return (
     <section id="demo" className="scroll-mt-20 bg-zinc-950 py-20 text-zinc-100 lg:py-24">

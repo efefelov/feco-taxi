@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { io, Socket } from 'socket.io-client'
 import type {
   EarningsToday,
@@ -14,10 +14,36 @@ import type {
 
 // ===== Хелперы-подписки =====
 
+/** Запись в журнале ленты: судьба заказа после исчезновения из общего фида */
+export interface FeedHistoryEntry {
+  id: string
+  /** mine — взяли вы; skipped — вы нажали «Мимо»; lost — забрал другой; expired — никто не взял */
+  status: 'mine' | 'skipped' | 'lost' | 'expired'
+  at: number
+  order: OrderDTO
+}
+
 export function useDriverFeed(onOrder: (o: OrderDTO) => void) {
   const [orders, setOrders] = useState<OrderDTO[]>([])
+  const [history, setHistory] = useState<FeedHistoryEntry[]>([])
   const socketRef = useRef<Socket | null>(null)
   const [connected, setConnected] = useState(false)
+
+  /** Снапшоты заказов для журнала (ограничен 200 записями) */
+  const ordersMapRef = useRef(new Map<string, OrderDTO>())
+  /** Заказы, которые попытались взять вы (для различения «взяли вы» vs «другой водитель») */
+  const mineRef = useRef(new Set<string>())
+  /** Заказы, которые вы сознательно пропустили («Мимо») */
+  const skippedRef = useRef(new Set<string>())
+
+  const snapshot = useCallback((o: OrderDTO) => {
+    const m = ordersMapRef.current
+    m.set(o.id, o)
+    if (m.size > 200) {
+      const first = m.keys().next().value
+      if (typeof first === 'string') m.delete(first)
+    }
+  }, [])
 
   useEffect(() => {
     const s = io('/?XTransformPort=3003', {
@@ -46,22 +72,61 @@ export function useDriverFeed(onOrder: (o: OrderDTO) => void) {
     })
     s.on('disconnect', () => setConnected(false))
     s.on('connect_error', () => setConnected(false))
-    s.on('feed:state', (d: { orders: OrderDTO[] }) => setOrders(d.orders ?? []))
+    s.on('feed:state', (d: { orders: OrderDTO[] }) => {
+      setOrders(d.orders ?? [])
+      ;(d.orders ?? []).forEach(snapshot)
+    })
     s.on('orders:new', (d: { order: OrderDTO }) => {
       upsert(d.order)
+      snapshot(d.order)
       onOrder(d.order)
     })
-    s.on('orders:update', (d: { order: OrderDTO }) => upsert(d.order))
-    s.on('orders:remove', (d: { id: string }) =>
+    s.on('orders:update', (d: { order: OrderDTO }) => {
+      upsert(d.order)
+      snapshot(d.order)
+    })
+    s.on('orders:remove', (d: { id: string; reason?: 'taken' | 'expired' }) => {
+      const snap = ordersMapRef.current.get(d.id)
+      if (snap) {
+        // Ваше действие информативнее исхода: сначала «взяли вы», затем «вы нажали Мимо»,
+        // и только потом — чем закончилась жизнь заказа (истёк / у другого)
+        const status: FeedHistoryEntry['status'] = mineRef.current.has(d.id)
+          ? 'mine'
+          : skippedRef.current.has(d.id)
+            ? 'skipped'
+            : d.reason === 'expired'
+              ? 'expired'
+              : 'lost'
+        setHistory((prev) => [{ id: d.id, status, at: Date.now(), order: snap }, ...prev].slice(0, 40))
+      }
+      ordersMapRef.current.delete(d.id)
       setOrders((prev) => prev.filter((o) => o.id !== d.id))
-    )
+    })
 
     return () => {
       s.disconnect()
     }
   }, [])
 
-  return { orders, connected }
+  /** Отметить: этот заказ пытаетесь взять вы (до emit driver:accept) */
+  const markMine = useCallback((id: string) => {
+    mineRef.current.add(id)
+  }, [])
+
+  /** Коррекция гонки: заказ успели взять раньше вас — переписываем судьбу записи */
+  const markLost = useCallback((id: string) => {
+    mineRef.current.delete(id)
+    setHistory((prev) =>
+      prev.map((h) => (h.id === id && h.status === 'mine' ? { ...h, status: 'lost' } : h))
+    )
+  }, [])
+
+  /** Отметить: этот заказ вы сознательно пропустили («Мимо») */
+  const markSkipped = useCallback((id: string) => {
+    skippedRef.current.add(id)
+  }, [])
+
+  return { orders, connected, history, markMine, markLost, markSkipped }
 }
 
 export function useDemand() {

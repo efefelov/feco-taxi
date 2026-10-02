@@ -18,6 +18,9 @@ import {
   Eye,
   Handshake,
   ShieldCheck,
+  History,
+  MousePointerClick,
+  Clock,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -25,6 +28,7 @@ import { toast } from '@/hooks/use-toast'
 import { CityMap } from './city-map'
 import { DemandForecast } from './demand-forecast'
 import { useDemand, useDriverFeed, useDriverRide } from '@/lib/pryamo/socket'
+import type { FeedHistoryEntry } from '@/lib/pryamo/socket'
 import { rub, num, plural } from '@/lib/pryamo/format'
 import type { OrderDTO, RideDTO, WeekDay } from '@/lib/pryamo/types'
 
@@ -46,7 +50,7 @@ export function DriverDemo() {
   const [seen] = useState(() => new Set<string>())
   const [driverRide, setDriverRide] = useState<RideDTO | null>(null)
 
-  const { orders, connected } = useDriverFeed((o) => {
+  const { orders, connected, history, markMine, markLost, markSkipped } = useDriverFeed((o) => {
     if (!seen.has(o.id)) {
       seen.add(o.id)
       toast({
@@ -70,12 +74,24 @@ export function DriverDemo() {
     },
     onEarnings: () => {},
     onAcceptFailed: (id, reason) => {
+      if (reason === 'taken') markLost(id)
       toast({
         title: reason === 'taken' ? 'Успели раньше вас' : 'Заказ недоступен',
         description: 'У нас это не штраф и не понижение приоритета. Просто не повезло.',
       })
     },
   })
+
+  // Обёртки приёма/отказа: помечаем судьбу заказа для журнала ленты
+  const handleAccept = (id: string) => {
+    markMine(id)
+    accept(id)
+  }
+
+  const handleDecline = (id: string) => {
+    markSkipped(id)
+    decline(id)
+  }
 
   // Тикер времени истечения заказов
   const [, forceTick] = useState(0)
@@ -184,7 +200,7 @@ export function DriverDemo() {
           <div className="feed-scroll max-h-[26rem] space-y-3 overflow-y-auto pr-2">
             <AnimatePresence initial={false}>
               {sortedOrders.map((o) => (
-                <OrderCard key={o.id} order={o} onAccept={() => accept(o.id)} onDecline={() => decline(o.id)} />
+                <OrderCard key={o.id} order={o} onAccept={() => handleAccept(o.id)} onDecline={() => handleDecline(o.id)} />
               ))}
             </AnimatePresence>
             {sortedOrders.length === 0 && (
@@ -194,6 +210,9 @@ export function DriverDemo() {
             )}
           </div>
         </div>
+
+        {/* Журнал ленты: судьба каждого заказа + штрафа всегда ноль */}
+        <OrderHistoryLog history={history} />
       </div>
 
       {/* Правая колонка: доход + спрос + платформа */}
@@ -477,6 +496,174 @@ function StatTile({
       <Icon className="h-4 w-4 text-emerald-400" />
       <p className={cn('mt-1.5 text-xl font-black tabular-nums', accent)}>{value}</p>
       <p className="text-[10px] uppercase tracking-wide text-zinc-500">{label}</p>
+    </div>
+  )
+}
+
+// ===== Журнал ленты: судьба каждого заказа =====
+
+type HistoryFilter = 'all' | FeedHistoryEntry['status']
+
+const HISTORY_STATUS: Record<
+  FeedHistoryEntry['status'],
+  { chip: string; icon: React.ComponentType<{ className?: string }>; chipCls: string; payCls: string }
+> = {
+  mine: {
+    chip: 'взято вами',
+    icon: Check,
+    chipCls: 'bg-emerald-500/15 text-emerald-300',
+    payCls: 'text-emerald-400',
+  },
+  skipped: {
+    chip: 'вы нажали «Мимо»',
+    icon: MousePointerClick,
+    chipCls: 'bg-amber-400/10 text-amber-300',
+    payCls: 'text-zinc-500',
+  },
+  lost: {
+    chip: 'у другого водителя',
+    icon: Eye,
+    chipCls: 'bg-zinc-700/50 text-zinc-400',
+    payCls: 'text-zinc-500',
+  },
+  expired: {
+    chip: 'никто не взял',
+    icon: Clock,
+    chipCls: 'bg-zinc-800/80 text-zinc-500',
+    payCls: 'text-zinc-600',
+  },
+}
+
+function historyTime(at: number): string {
+  return new Date(at).toLocaleTimeString('ru-RU', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
+}
+
+function OrderHistoryLog({ history }: { history: FeedHistoryEntry[] }) {
+  const [filter, setFilter] = useState<HistoryFilter>('all')
+
+  const counts = useMemo(
+    () => ({
+      all: history.length,
+      mine: history.filter((h) => h.status === 'mine').length,
+      skipped: history.filter((h) => h.status === 'skipped').length,
+      lost: history.filter((h) => h.status === 'lost').length,
+      expired: history.filter((h) => h.status === 'expired').length,
+    }),
+    [history]
+  )
+
+  const filtered = filter === 'all' ? history : history.filter((h) => h.status === filter)
+
+  const chips: { key: HistoryFilter; label: string }[] = [
+    { key: 'all', label: 'Все' },
+    { key: 'mine', label: 'Ваши' },
+    { key: 'skipped', label: 'Пропущенные' },
+    { key: 'lost', label: 'У других' },
+    { key: 'expired', label: 'Истекли' },
+  ]
+
+  return (
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5 backdrop-blur">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="flex items-center gap-2 text-lg font-bold text-white">
+          <History className="h-5 w-5 text-emerald-400" />
+          Журнал ленты
+          <span className="rounded-lg bg-zinc-800 px-2 py-0.5 text-sm font-black tabular-nums text-emerald-300">
+            {history.length}
+          </span>
+        </h3>
+        <span className="flex items-center gap-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/8 px-2.5 py-1 text-[11px] font-bold text-emerald-300">
+          <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
+          штрафов за смену: 0 ₽
+        </span>
+      </div>
+      <p className="mt-1.5 text-xs text-zinc-500">
+        Судьба каждого заказа, который прошёл через ленту. У монополиста отказы из этой ленты
+        роняют «карточку качества» — у нас просто остаются в журнале.
+      </p>
+
+      {history.length > 0 && (
+        <>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {chips.map((c) => {
+              const n = counts[c.key]
+              const isActive = filter === c.key
+              return (
+                <button
+                  key={c.key}
+                  onClick={() => setFilter(c.key)}
+                  aria-pressed={isActive}
+                  className={cn(
+                    'rounded-full border px-3 py-1 text-xs font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50',
+                    isActive
+                      ? 'border-emerald-500 bg-emerald-500/15 text-emerald-300'
+                      : 'border-zinc-700 bg-zinc-900/60 text-zinc-400 hover:border-zinc-600 hover:text-zinc-200'
+                  )}
+                >
+                  {c.label} <span className="ml-0.5 font-black tabular-nums">{n}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="feed-scroll mt-3 max-h-56 space-y-1.5 overflow-y-auto pr-1">
+            <AnimatePresence initial={false}>
+              {filtered.map((h) => {
+                const meta = HISTORY_STATUS[h.status]
+                const o = h.order
+                return (
+                  <motion.div
+                    key={h.id + h.at}
+                    layout
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex items-center gap-2.5 rounded-lg border border-zinc-800/70 bg-zinc-950/40 px-3 py-2 transition-colors hover:border-zinc-700"
+                  >
+                    <span
+                      className={cn(
+                        'shrink-0 rounded-md p-1.5',
+                        meta.chipCls
+                      )}
+                    >
+                      <meta.icon className="h-3.5 w-3.5" aria-hidden />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-semibold text-zinc-300">
+                        {o.from.label} → {o.to.label}
+                      </p>
+                      <p className="text-[10px] uppercase tracking-wide text-zinc-600">
+                        {o.tariff.name} · {meta.chip}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className={cn('text-xs font-bold tabular-nums', meta.payCls)}>
+                        {h.status === 'mine' ? '+' : ''}{rub(o.driverPayout)}
+                      </p>
+                      <p className="text-[10px] tabular-nums text-zinc-600">{historyTime(h.at)}</p>
+                    </div>
+                  </motion.div>
+                )
+              })}
+            </AnimatePresence>
+            {filtered.length === 0 && (
+              <div className="flex h-20 items-center justify-center rounded-xl border border-dashed border-zinc-800 text-xs text-zinc-500">
+                В этой категории пока пусто
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {history.length === 0 && (
+        <div className="mt-3 flex h-28 items-center justify-center rounded-xl border border-dashed border-zinc-800 text-sm text-zinc-500">
+          Ждём первых разобранных заказов — обычно через 30–60 секунд
+        </div>
+      )}
     </div>
   )
 }
