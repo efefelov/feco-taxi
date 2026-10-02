@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Gavel, Layers, Play, Square, RotateCcw, Hand, CircleAlert, Check, X, Eye } from 'lucide-react'
+import { Gavel, Layers, Play, Square, RotateCcw, Hand, CircleAlert, Check, X, Eye, Radio } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { estimatePrice, plural, rub } from '@/lib/pryamo/format'
+import { estimatePrice, num, plural, rub } from '@/lib/pryamo/format'
 import { cn } from '@/lib/utils'
+import { useEngineStatus } from '@/lib/pryamo/socket'
 
 // ===== АУКЦИОН ПРЯМО =====
 
@@ -73,6 +74,7 @@ function AuctionPanel() {
   const takenRef = useRef(false)
   const timersRef = useRef<number[]>([])
   const counterRef = useRef(0)
+  const { stats: engineStats } = useEngineStatus()
 
   const clearTimers = useCallback(() => {
     timersRef.current.forEach((t) => clearTimeout(t))
@@ -203,6 +205,24 @@ function AuctionPanel() {
           </div>
         ))}
       </div>
+
+      {/* Живая конкуренция: реальный город демо-движка */}
+      {engineStats && engineStats.onlineDrivers > 0 && (
+        <p className="relative mt-2.5 flex items-center gap-1.5 text-[11px] leading-snug text-zinc-500">
+          <Radio className="h-3 w-3 shrink-0 animate-pulse text-emerald-400" aria-hidden />
+          <span>
+            Живой город демо:{' '}
+            <span className="font-bold text-zinc-300">
+              {num(engineStats.onlineDrivers)}{' '}
+              {plural(engineStats.onlineDrivers, 'водитель', 'водителя', 'водителей')}
+            </span>{' '}
+            онлайн ·{' '}
+            <span className="font-bold text-zinc-300">{num(engineStats.ordersPerHour)}</span>{' '}
+            {plural(engineStats.ordersPerHour, 'заказ', 'заказа', 'заказов')}/час — боты реагируют,
+            но конкуренция настоящая
+          </span>
+        </p>
+      )}
 
       {/* Поле игры */}
       <div className="relative mt-4 flex min-h-[280px] flex-1 flex-col">

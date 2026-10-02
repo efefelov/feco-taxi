@@ -1,9 +1,11 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Banknote,
+  Check,
   Clock,
+  Copy,
   Package,
   ReceiptText,
   Route,
@@ -21,6 +23,7 @@ import { Button } from '@/components/ui/button'
 import type { EarningsToday, RideDTO } from '@/lib/pryamo/types'
 import type { FeedHistoryEntry } from '@/lib/pryamo/socket'
 import { rub, plural } from '@/lib/pryamo/format'
+import { shareText } from '@/lib/pryamo/clipboard'
 
 interface ShiftReportProps {
   open: boolean
@@ -60,6 +63,8 @@ function Metric({
  * выплата, комиссия 8%, сравнение с монополистом и судьба заказов из журнала.
  */
 export function ShiftReport({ open, onOpenChange, earnings, lastRides, history, onJoin }: ShiftReportProps) {
+  const [shareState, setShareState] = useState<'idle' | 'ok' | 'fail'>('idle')
+
   const reportTime = useMemo(
     () => new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
     // время формирования фиксируется в момент открытия отчёта
@@ -88,6 +93,23 @@ export function ShiftReport({ open, onOpenChange, earnings, lastRides, history, 
       },
     }
   }, [earnings, lastRides, history])
+
+  /** Текстовый отчёт для шаринга: без эмодзи, читается в любом мессенджере */
+  const shareReport = async () => {
+    const lines = [
+      'Отчёт по смене — ПРЯМО (живое демо)',
+      `Выплата на руки: ${rub(earnings.payout)}`,
+      `Оборот ${rub(earnings.gross)} · комиссия 8%: ${rub(earnings.commission)}`,
+      `Поездок: ${earnings.rides} · часов онлайн: ${earnings.hoursOnline.toFixed(1).replace('.', ',')} · в час: ${rub(stats.hourly)}`,
+      `Та же смена у монополиста: комиссия ~40% = ${rub(stats.yandexTake)}`,
+      `Разница в вашу пользу: +${rub(stats.diff)}`,
+      'Штрафов за смену: 0 ₽. Отказы не влияли на приоритет.',
+      'ПРЯМО — комиссия 8% вместо 24–37%. pryamo.taxi',
+    ]
+    const res = await shareText(lines.join('\n'))
+    setShareState(res === 'failed' ? 'fail' : 'ok')
+    window.setTimeout(() => setShareState('idle'), 2500)
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -221,12 +243,33 @@ export function ShiftReport({ open, onOpenChange, earnings, lastRides, history, 
             Такой отчёт — в приложении после каждой смены: без «опций», волатильности комиссии
             и сюрпризов. {earnings.rides > 0 ? `${earnings.rides} ${plural(earnings.rides, 'поездка', 'поездки', 'поездок')} уже посчитаны честно.` : ''}
           </p>
-          <Button
-            onClick={onJoin}
-            className="bg-emerald-500 font-bold text-zinc-950 hover:bg-emerald-400"
-          >
-            Занять место в первой волне
-          </Button>
+          <div className="flex shrink-0 gap-2">
+            <Button
+              onClick={shareReport}
+              variant="outline"
+              className="border-zinc-700 bg-transparent text-zinc-300 hover:bg-zinc-800 hover:text-white"
+            >
+              {shareState === 'ok' ? (
+                <>
+                  <Check className="mr-1 h-4 w-4 text-emerald-400" aria-hidden />
+                  Скопировано
+                </>
+              ) : shareState === 'fail' ? (
+                'Не вышло'
+              ) : (
+                <>
+                  <Copy className="mr-1 h-4 w-4" aria-hidden />
+                  Скопировать отчёт
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={onJoin}
+              className="bg-emerald-500 font-bold text-zinc-950 hover:bg-emerald-400"
+            >
+              Занять место в первой волне
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

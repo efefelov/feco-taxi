@@ -14,6 +14,7 @@ import { IncomeCalculator } from '@/components/pryamo/calculator'
 import { Monetization } from '@/components/pryamo/monetization'
 import { Fleets } from '@/components/pryamo/fleets'
 import { RatingSection } from '@/components/pryamo/rating'
+import { TechSection } from '@/components/pryamo/tech'
 import { Roadmap } from '@/components/pryamo/roadmap'
 import { Faq } from '@/components/pryamo/faq'
 import { Waitlist } from '@/components/pryamo/waitlist'
@@ -39,6 +40,7 @@ export default function Home() {
         <Monetization />
         <Fleets />
         <RatingSection />
+        <TechSection />
         <Roadmap />
         <Waitlist />
         <Faq />

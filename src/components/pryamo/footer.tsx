@@ -10,6 +10,7 @@ const FOOTER_NAV: { title: string; links: { href: string; label: string }[] }[] 
       { href: '#tariffs', label: 'Тарифы' },
       { href: '#flow', label: 'Куда уходит чек' },
       { href: '#fair', label: 'Аукцион против очереди' },
+      { href: '#tech', label: 'Навигатор и GPS' },
     ],
   },
   {
@@ -78,7 +79,7 @@ export function Footer() {
                     <li key={l.href + l.label}>
                       <a
                         href={l.href}
-                        className="text-sm text-zinc-400 transition-colors hover:text-emerald-300"
+                        className="text-sm text-zinc-400 underline-offset-4 transition-colors hover:text-emerald-300 hover:underline hover:decoration-emerald-500/50"
                       >
                         {l.label}
                       </a>

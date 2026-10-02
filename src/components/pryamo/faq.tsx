@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/accordion'
 import { HelpCircle, Search, X, SearchX, MessageSquare, ArrowRight, Link2, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { copyText } from '@/lib/pryamo/clipboard'
 
 interface FaqItem {
   q: string
@@ -103,27 +104,6 @@ function filterFaqs(nq: string): FaqItem[] {
   })
 }
 
-/** Копирование в буфер с fallback для контекстов без Clipboard API */
-async function copyText(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text)
-    return true
-  } catch {
-    try {
-      const ta = document.createElement('textarea')
-      ta.value = text
-      ta.style.position = 'fixed'
-      ta.style.opacity = '0'
-      document.body.appendChild(ta)
-      ta.select()
-      const ok = document.execCommand('copy')
-      document.body.removeChild(ta)
-      return ok
-    } catch {
-      return false
-    }
-  }
-}
 
 export function Faq() {
   const [query, setQuery] = useState('')

@@ -2,21 +2,52 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Zap, Menu, X, ArrowRight, Radio } from 'lucide-react'
+import {
+  Zap,
+  Menu,
+  X,
+  ArrowRight,
+  Radio,
+  ChevronDown,
+  Gavel,
+  Star,
+  Navigation,
+  Building2,
+  Banknote,
+  Receipt,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { useEngineStatus } from '@/lib/pryamo/socket'
 
+/** Прямые ссылки верхнего уровня */
 const NAV = [
   { href: '#problem', label: 'Проблема' },
   { href: '#compare', label: 'Сравнение' },
-  { href: '#flow', label: 'Чек' },
   { href: '#demo', label: 'Живое демо' },
   { href: '#calc', label: 'Калькулятор' },
   { href: '#money', label: 'Монетизация' },
   { href: '#roadmap', label: 'План' },
   { href: '#join', label: 'Первая волна' },
 ]
+
+/** Выпадающее меню «Продукт»: секции, не влезающие в верхний ряд */
+const PRODUCT_LINKS = [
+  { href: '#tariffs', label: 'Тарифы', desc: 'формула — в оферте', icon: Banknote },
+  { href: '#flow', label: 'Чек', desc: 'куда уходит каждая копейка', icon: Receipt },
+  { href: '#fair', label: 'Аукцион', desc: 'лента без приоритетов', icon: Gavel },
+  { href: '#rating', label: 'Рейтинг 2.0', desc: 'медиана вместо среднего', icon: Star },
+  { href: '#tech', label: 'Технологии', desc: 'навигатор и GPS без клетки', icon: Navigation },
+  { href: '#fleets', label: 'Таксопаркам', desc: 'B2B-подключение', icon: Building2 },
+]
+
+const PRODUCT_IDS = PRODUCT_LINKS.map((l) => l.href.slice(1))
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false)
@@ -39,9 +70,9 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  // Scroll-spy: подсветка активной секции
+  // Scroll-spy: подсветка активной секции (прямые + ссылки из «Продукта»)
   useEffect(() => {
-    const ids = NAV.map((n) => n.href.slice(1))
+    const ids = [...NAV, ...PRODUCT_LINKS].map((n) => n.href.slice(1))
     const sections = ids
       .map((id) => document.getElementById(id))
       .filter((el): el is HTMLElement => el !== null)
@@ -65,6 +96,8 @@ export function Navbar() {
     sections.forEach((s) => observer.observe(s))
     return () => observer.disconnect()
   }, [])
+
+  const productActive = PRODUCT_IDS.includes(active)
 
   return (
     <header
@@ -90,7 +123,101 @@ export function Navbar() {
           </a>
 
           <nav className="hidden items-center gap-0.5 xl:flex" aria-label="Основная навигация">
-            {NAV.map((n) => {
+            {NAV.slice(0, 2).map((n) => {
+              const isActive = active === n.href.slice(1)
+              return (
+                <a
+                  key={n.href}
+                  href={n.href}
+                  className={cn(
+                    'relative rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                    isActive
+                      ? 'text-emerald-300'
+                      : 'text-zinc-300 hover:bg-zinc-800/60 hover:text-white'
+                  )}
+                >
+                  {n.label}
+                  {isActive && (
+                    <motion.span
+                      layoutId="nav-underline"
+                      className="absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full bg-emerald-400"
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                </a>
+              )
+            })}
+
+            {/* Выпадающее меню «Продукт» */}
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className={cn(
+                  'relative flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-emerald-500/60',
+                  productActive
+                    ? 'text-emerald-300'
+                    : 'text-zinc-300 hover:bg-zinc-800/60 hover:text-white',
+                  'data-[state=open]:bg-zinc-800/60 data-[state=open]:text-white'
+                )}
+                aria-label="Разделы продукта"
+              >
+                Продукт
+                <ChevronDown
+                  className="h-3.5 w-3.5 transition-transform duration-200 data-[state=open]:rotate-180"
+                  aria-hidden
+                />
+                {productActive && (
+                  <motion.span
+                    layoutId="nav-underline"
+                    className="absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full bg-emerald-400"
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  />
+                )}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                sideOffset={10}
+                className="w-64 border-zinc-800 bg-zinc-900/95 p-1.5 shadow-xl shadow-black/40 backdrop-blur-xl"
+              >
+                {PRODUCT_LINKS.map((l) => {
+                  const isActive = active === l.href.slice(1)
+                  return (
+                    <DropdownMenuItem
+                      key={l.href}
+                      asChild
+                      className={cn(
+                        'cursor-pointer gap-3 rounded-lg px-3 py-2.5 outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60',
+                        isActive
+                          ? 'bg-emerald-500/10 text-emerald-300'
+                          : 'text-zinc-300 focus-visible:bg-zinc-800 data-[highlighted]:bg-zinc-800'
+                      )}
+                    >
+                      <a href={l.href}>
+                        <span
+                          className={cn(
+                            'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+                            isActive
+                              ? 'bg-emerald-500/15 text-emerald-400'
+                              : 'bg-zinc-800 text-zinc-400'
+                          )}
+                        >
+                          <l.icon className="h-4 w-4" aria-hidden />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-sm font-semibold leading-tight">
+                            {l.label}
+                          </span>
+                          <span className="block text-[11px] leading-tight text-zinc-500">
+                            {l.desc}
+                          </span>
+                        </span>
+                      </a>
+                    </DropdownMenuItem>
+                  )
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {NAV.slice(2).map((n) => {
               const isActive = active === n.href.slice(1)
               return (
                 <a
@@ -189,7 +316,35 @@ export function Navbar() {
                 />
                 {engineLabel}
               </span>
-              {NAV.map((n) => (
+              {NAV.slice(0, 2).map((n) => (
+                <a
+                  key={n.href}
+                  href={n.href}
+                  onClick={() => setOpen(false)}
+                  className="block rounded-lg px-3 py-3 text-base font-medium text-zinc-200 hover:bg-zinc-800/60"
+                >
+                  {n.label}
+                </a>
+              ))}
+              <p className="px-3 pb-1 pt-3 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600">
+                Продукт
+              </p>
+              {PRODUCT_LINKS.map((l) => (
+                <a
+                  key={l.href}
+                  href={l.href}
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-800/60 hover:text-white"
+                >
+                  <l.icon className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
+                  {l.label}
+                  <span className="ml-auto text-[11px] text-zinc-600">{l.desc}</span>
+                </a>
+              ))}
+              <p className="px-3 pb-1 pt-3 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600">
+                Далее
+              </p>
+              {NAV.slice(2).map((n) => (
                 <a
                   key={n.href}
                   href={n.href}

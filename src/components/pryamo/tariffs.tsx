@@ -175,9 +175,14 @@ function TariffCard({ tariff, distanceKm, durationMin }: { tariff: Tariff; dista
         'group relative flex h-full flex-col rounded-2xl border p-5 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg sm:p-6',
         isPopular
           ? 'border-emerald-300/80 bg-white shadow-md shadow-emerald-100 hover:shadow-emerald-200/70'
-          : 'border-zinc-200 bg-white hover:border-zinc-300 hover:shadow-zinc-200/60'
+          : 'border-zinc-200 bg-white hover:border-emerald-300/70 hover:shadow-zinc-200/60'
       )}
     >
+      {/* Градиентная нить сверху — проявляется при наведении */}
+      <span
+        className="absolute inset-x-4 top-0 h-[3px] rounded-b-full bg-gradient-to-r from-emerald-400 via-emerald-300 to-amber-300 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        aria-hidden="true"
+      />
       {isPopular && (
         <span className="absolute -top-2.5 left-5 rounded-full bg-emerald-500 px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-950 shadow-sm">
           выбирают чаще всего

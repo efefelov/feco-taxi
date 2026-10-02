@@ -276,6 +276,17 @@
   }
 }
 
+/* Плавные переходы по якорям навигации */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 /* Обрезаем горизонтальное переполнение на уровне html:
    framer-motion initial x:±24 у карточек до срабатывания whileInView
    кратковременно раздувает scrollWidth на мобильных. clip НЕ создаёт
