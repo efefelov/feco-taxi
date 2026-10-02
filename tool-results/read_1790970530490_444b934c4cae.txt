@@ -1,0 +1,1032 @@
+     1→/**
+     2→ * ПРЯМО ride-engine — WebSocket-сервис живого рынка такси (порт 3003).
+     3→ *
+     4→ * Независимый мини-сервис (Bun + socket.io), вся симуляция в памяти, без БД.
+     5→ * Полный контракт событий описан в /home/z/my-project/worklog.md (часть 3.4).
+     6→ *
+     7→ * Клиент -> сервер:
+     8→ *   driver:join, passenger:join, passenger:book, ride:rate,
+     9→ *   driver:accept, driver:decline, driver:go-online, driver:go-offline
+    10→ *
+    11→ * Сервер -> клиент:
+    12→ *   feed:state, orders:new, orders:remove, demand:state, stats:live,
+    13→ *   ride:state { ride, hint }, ride:completed, driver:earnings,
+    14→ *   driver:online, driver:accept-failed, ride:rated
+    15→ *
+    16→ * Примечания к DTO:
+    17→ *  - RideDTO.driver = null, пока статус 'searching' (водитель ещё не назначен).
+    18→ *  - ride:state дополнительно несёт поле hint (строка-подсказка для UI) —
+    19→ *    аддитивное расширение контракта, фронтенд может его игнорировать.
+    20→ */
+    21→
+    22→import { createServer } from 'http'
+    23→import { Server, type Socket } from 'socket.io'
+    24→
+    25→const PORT = 3003 // фиксированный порт по контракту, НЕ из окружения
+    26→
+    27→// ============================== Утилиты ==============================
+    28→
+    29→const randInt = (min: number, max: number): number =>
+    30→  Math.floor(Math.random() * (max - min + 1)) + min
+    31→const randFloat = (min: number, max: number): number => Math.random() * (max - min) + min
+    32→const round1 = (n: number): number => Math.round(n * 10) / 10
+    33→const round2 = (n: number): number => Math.round(n * 100) / 100
+    34→const clamp = (n: number, min: number, max: number): number => Math.min(max, Math.max(min, n))
+    35→const pick = <T>(arr: readonly T[]): T => arr[randInt(0, arr.length - 1)]
+    36→
+    37→function log(msg: string): void {
+    38→  console.log(`[${new Date().toISOString().slice(11, 19)}] ${msg}`)
+    39→}
+    40→
+    41→function isObj(v: unknown): Record<string, unknown> {
+    42→  return typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : {}
+    43→}
+    44→
+    45→function safe(fn: () => void): () => void {
+    46→  return () => {
+    47→    try {
+    48→      fn()
+    49→    } catch (err) {
+    50→      log(`ошибка обработчика: ${err instanceof Error ? err.message : String(err)}`)
+    51→    }
+    52→  }
+    53→}
+    54→
+    55→function safeArg<A>(fn: (arg: A) => void): (arg: A) => void {
+    56→  return (arg: A) => {
+    57→    try {
+    58→      fn(arg)
+    59→    } catch (err) {
+    60→      log(`ошибка обработчика: ${err instanceof Error ? err.message : String(err)}`)
+    61→    }
+    62→  }
+    63→}
+    64→
+    65→// ============================== Типы DTO ==============================
+    66→
+    67→export interface AddressPoint {
+    68→  label: string
+    69→  zoneId: string
+    70→}
+    71→
+    72→export interface TariffRef {
+    73→  id: string
+    74→  name: string
+    75→  multiplier: number
+    76→}
+    77→
+    78→export interface OrderDTO {
+    79→  id: string
+    80→  from: AddressPoint
+    81→  to: AddressPoint
+    82→  distanceKm: number
+    83→  durationMin: number
+    84→  tariff: TariffRef
+    85→  priceTotal: number
+    86→  driverPayout: number
+    87→  commissionRub: number
+    88→  surge: number
+    89→  createdAt: string
+    90→  expiresAt: string
+    91→}
+    92→
+    93→export interface ZoneDTO {
+    94→  id: string
+    95→  name: string
+    96→  x: number
+    97→  y: number
+    98→  demand: number
+    99→  surge: number
+   100→  waitingDrivers: number
+   101→  ordersWaiting: number
+   102→  avgWaitMin: number
+   103→}
+   104→
+   105→export interface DriverInfo {
+   106→  name: string
+   107→  initials: string
+   108→  car: string
+   109→  plate: string
+   110→  rating: number
+   111→  rides: number
+   112→}
+   113→
+   114→export type RideStatus = 'searching' | 'arriving' | 'onboard' | 'completed'
+   115→
+   116→export interface RideDTO {
+   117→  id: string
+   118→  status: RideStatus
+   119→  /** null, пока статус 'searching' — водитель ещё не найден */
+   120→  driver: DriverInfo | null
+   121→  from: AddressPoint
+   122→  to: AddressPoint
+   123→  distanceKm: number
+   124→  etaMin: number
+   125→  progress: number
+   126→  priceTotal: number
+   127→  driverPayout: number
+   128→  tariffName: string
+   129→  startedAt: string
+   130→}
+   131→
+   132→export interface ReceiptDTO {
+   133→  price: number
+   134→  driverPayout: number
+   135→  commissionRub: number
+   136→  tip: number
+   137→}
+   138→
+   139→export interface EarningsToday {
+   140→  gross: number
+   141→  payout: number
+   142→  commission: number
+   143→  rides: number
+   144→  hoursOnline: number
+   145→}
+   146→
+   147→export interface LiveStatsDTO {
+   148→  activeDrivers: number
+   149→  onlineDrivers: number
+   150→  ordersPerHour: number
+   151→  avgWaitSec: number
+   152→  completedToday: number
+   153→  grossTodayRub: number
+   154→}
+   155→
+   156→// ============================== Зоны ==============================
+   157→
+   158→type ZoneId = 'center' | 'north' | 'south' | 'west' | 'east' | 'airport'
+   159→
+   160→interface ZoneState {
+   161→  id: ZoneId
+   162→  name: string
+   163→  x: number
+   164→  y: number
+   165→  demand: number // 0..100, случайное блуждание
+   166→  surge: number // 1.0..1.5
+   167→}
+   168→
+   169→const ZONES: ZoneState[] = [
+   170→  { id: 'center', name: 'Центр', x: 500, y: 300, demand: randFloat(45, 75), surge: 1 },
+   171→  { id: 'north', name: 'Север', x: 500, y: 100, demand: randFloat(25, 55), surge: 1 },
+   172→  { id: 'south', name: 'Юг', x: 500, y: 500, demand: randFloat(25, 55), surge: 1 },
+   173→  { id: 'west', name: 'Запад', x: 200, y: 300, demand: randFloat(25, 55), surge: 1 },
+   174→  { id: 'east', name: 'Восток', x: 800, y: 300, demand: randFloat(25, 55), surge: 1 },
+   175→  { id: 'airport', name: 'Аэропорт', x: 900, y: 80, demand: randFloat(30, 60), surge: 1 },
+   176→]
+   177→
+   178→function zoneById(id: string): ZoneState {
+   179→  return ZONES.find((z) => z.id === id) ?? ZONES[0]
+   180→}
+   181→
+   182→/** surge применяется, когда спрос зоны подачи больше 60 */
+   183→function surgeForZone(id: string): number {
+   184→  const z = zoneById(id)
+   185→  return z.demand > 60 ? round2(z.surge) : 1
+   186→}
+   187→
+   188→function tickZones(): void {
+   189→  for (const z of ZONES) {
+   190→    z.demand = clamp(z.demand + randFloat(-6, 6), 5, 95)
+   191→    z.surge = Math.min(1.5, 1 + Math.max(0, z.demand - 60) / 100)
+   192→  }
+   193→}
+   194→
+   195→function countOrdersFromZone(zoneId: string): number {
+   196→  let n = 0
+   197→  for (const o of orders.values()) {
+   198→    if (o.from.zoneId === zoneId) n += 1
+   199→  }
+   200→  return n
+   201→}
+   202→
+   203→function zoneDTOs(): ZoneDTO[] {
+   204→  return ZONES.map((z) => ({
+   205→    id: z.id,
+   206→    name: z.name,
+   207→    x: z.x,
+   208→    y: z.y,
+   209→    demand: Math.round(z.demand),
+   210→    surge: round2(z.surge),
+   211→    // водителей на ожидании меньше при высоком спросе (обратная зависимость)
+   212→    waitingDrivers: Math.max(2, Math.round(34 - z.demand * 0.3) + randInt(-2, 2)),
+   213→    ordersWaiting: countOrdersFromZone(z.id) + Math.round(z.demand / 30),
+   214→    avgWaitMin: round1(2 + (z.demand / 100) * 10),
+   215→  }))
+   216→}
+   217→
+   218→// ============================== Адреса ==============================
+   219→
+   220→interface ZoneAddresses {
+   221→  streets: string[]
+   222→  fixed?: string[]
+   223→}
+   224→
+   225→const ADDRESSES: Record<ZoneId, ZoneAddresses> = {
+   226→  center: {
+   227→    streets: [
+   228→      'ул. Тверская',
+   229→      'Ленинский пр-т',
+   230→      'ул. Петровка',
+   231→      'Кузнецкий Мост',
+   232→      'ул. Никольская',
+   233→      'Рождественский б-р',
+   234→      'ул. Ильинка',
+   235→      'Театральный пр-д',
+   236→      'ул. Хохловка',
+   237→      'ул. Маросейка',
+   238→      'ул. Солянка',
+   239→      'Неглинная ул.',
+   240→    ],
+   241→  },
+   242→  north: {
+   243→    streets: [
+   244→      'Ленинградское ш.',
+   245→      'ул. Правды',
+   246→      'ул. Расплетина',
+   247→      'Дмитровское ш.',
+   248→      'ул. Мишина',
+   249→      'просп. Мира',
+   250→      'ул. Академика Королёва',
+   251→      'Огородный пр-д',
+   252→      'ул. Хачатуряна',
+   253→      'Селезнёвская ул.',
+   254→      'ул. Достоевского',
+   255→      'Тихвинская ул.',
+   256→    ],
+   257→  },
+   258→  south: {
+   259→    streets: [
+   260→      'Варшавское ш.',
+   261→      'ул. Академика Янгеля',
+   262→      'Липецкая ул.',
+   263→      'ул. Бакинская',
+   264→      'Каширское ш.',
+   265→      'Борисовские Пруды',
+   266→      'ул. Ключевая',
+   267→      'Ореховый б-р',
+   268→      'Шипиловская ул.',
+   269→      'ул. Лебедянская',
+   270→      'ул. Маршала Захарова',
+   271→      'Задонский пр-д',
+   272→    ],
+   273→  },
+   274→  west: {
+   275→    streets: [
+   276→      'Кутузовский пр-т',
+   277→      'ул. Крылатская',
+   278→      'Можайское ш.',
+   279→      'ул. Мосфильмовская',
+   280→      'ул. Барклая',
+   281→      'ул. Нежинская',
+   282→      'Рублёвское ш.',
+   283→      'ул. Рогова',
+   284→      'Аминьевское ш.',
+   285→      'ул. Лобачевского',
+   286→      'Багратионовский пр-д',
+   287→      'ул. 1812 года',
+   288→    ],
+   289→  },
+   290→  east: {
+   291→    streets: [
+   292→      'Щёлковское ш.',
+   293→      'Перовская ул.',
+   294→      'ш. Энтузиастов',
+   295→      'Сиреневый б-р',
+   296→      'ул. Первомайская',
+   297→      'Измайловский пр-т',
+   298→      'ул. Верхняя Первомайская',
+   299→      'Семёновский вал',
+   300→      'ул. Металлургов',
+   301→      'Большая Черкизовская ул.',
+   302→      'ул. Преображенская',
+   303→      'Никитинская ул.',
+   304→    ],
+   305→  },
+   306→  airport: {
+   307→    streets: [],
+   308→    fixed: [
+   309→      'Аэропорт Кольцово, терминал A',
+   310→      'Аэропорт Кольцово, терминал B',
+   311→      'Аэропорт Кольцово, терминал C',
+   312→      'Аэропорт Кольцово, VIP-терминал',
+   313→      'Аэропорт Кольцово, привокзальная пл.',
+   314→      'Аэропорт Кольцово, парковка P1',
+   315→      'Аэропорт Кольцово, парковка P2',
+   316→      'Аэропорт Кольцово, парковка P4',
+   317→      'Аэропорт Кольцово, зона прилёта',
+   318→      'Аэропорт Кольцово, зона вылета',
+   319→      'Аэропорт Кольцово, камера хранения',
+   320→      'Аэропорт Кольцово, гостиница',
+   321→    ],
+   322→  },
+   323→}
+   324→
+   325→function pickAddressFor(zone: ZoneState): AddressPoint {
+   326→  const a = ADDRESSES[zone.id]
+   327→  if (a.fixed && a.fixed.length > 0) {
+   328→    return { label: pick(a.fixed), zoneId: zone.id }
+   329→  }
+   330→  // случайная комбинация «улица + номер дома»
+   331→  return { label: `${pick(a.streets)}, ${randInt(1, 90)}`, zoneId: zone.id }
+   332→}
+   333→
+   334→function randomAddress(avoidZoneId?: string): AddressPoint {
+   335→  let zone = pick(ZONES)
+   336→  if (avoidZoneId && zone.id === avoidZoneId) {
+   337→    zone = pick(ZONES.filter((z) => z.id !== avoidZoneId))
+   338→  }
+   339→  return pickAddressFor(zone)
+   340→}
+   341→
+   342→/** Определяем зону по строке адреса; если не нашли — случайная зона */
+   343→function resolveAddress(label: string): AddressPoint {
+   344→  const norm = label.trim().toLowerCase()
+   345→  if (norm.length === 0) return randomAddress()
+   346→  for (const z of ZONES) {
+   347→    const fixed = ADDRESSES[z.id].fixed
+   348→    if (fixed) {
+   349→      for (const f of fixed) {
+   350→        if (f.toLowerCase() === norm) return { label, zoneId: z.id }
+   351→      }
+   352→    }
+   353→  }
+   354→  if (norm.length >= 4) {
+   355→    for (const z of ZONES) {
+   356→      for (const s of ADDRESSES[z.id].streets) {
+   357→        const sl = s.toLowerCase()
+   358→        if (norm.startsWith(sl) || sl.startsWith(norm)) {
+   359→          return { label, zoneId: z.id }
+   360→        }
+   361→      }
+   362→    }
+   363→  }
+   364→  return { label, zoneId: pick(ZONES).id }
+   365→}
+   366→
+   367→// ============================== Тарифы ==============================
+   368→
+   369→interface TariffDef {
+   370→  id: string
+   371→  name: string
+   372→  multiplier: number
+   373→  base: number // база посадки, руб
+   374→  perKm: number // руб/км
+   375→  perMin: number // руб/мин
+   376→  weight: number // вес для взвешенного выбора
+   377→}
+   378→
+   379→const TARIFFS: TariffDef[] = [
+   380→  { id: 'eco', name: 'Эконом', multiplier: 1.0, base: 79, perKm: 14, perMin: 6, weight: 45 },
+   381→  { id: 'comfort', name: 'Комфорт', multiplier: 1.35, base: 79, perKm: 14, perMin: 6, weight: 25 },
+   382→  { id: 'comfort-plus', name: 'Комфорт+', multiplier: 1.7, base: 79, perKm: 14, perMin: 6, weight: 11 },
+   383→  { id: 'business', name: 'Бизнес', multiplier: 2.4, base: 79, perKm: 14, perMin: 6, weight: 6 },
+   384→  { id: 'van', name: 'Минивэн', multiplier: 1.5, base: 79, perKm: 14, perMin: 6, weight: 9 },
+   385→  // Межгород: специальный тариф 34 руб/км, множитель 1.0
+   386→  { id: 'intercity', name: 'Межгород', multiplier: 1.0, base: 79, perKm: 34, perMin: 6, weight: 4 },
+   387→]
+   388→
+   389→const TOTAL_WEIGHT = TARIFFS.reduce((s, t) => s + t.weight, 0)
+   390→
+   391→function pickWeightedTariff(): TariffDef {
+   392→  let r = Math.random() * TOTAL_WEIGHT
+   393→  for (const t of TARIFFS) {
+   394→    r -= t.weight
+   395→    if (r <= 0) return t
+   396→  }
+   397→  return TARIFFS[0]
+   398→}
+   399→
+   400→function resolveTariff(tariffId: string | null | undefined): TariffDef {
+   401→  if (typeof tariffId === 'string') {
+   402→    const norm = tariffId.trim().toLowerCase().replace('_', '-')
+   403→    const found = TARIFFS.find((t) => t.id === norm)
+   404→    if (found) return found
+   405→  }
+   406→  return pickWeightedTariff()
+   407→}
+   408→
+   409→/** Цена = (база + руб/км * км + руб/мин * мин) * множитель тарифа * surge, округление до 10 руб */
+   410→function computePrice(t: TariffDef, distanceKm: number, durationMin: number, surge: number): number {
+   411→  const raw = (t.base + t.perKm * distanceKm + t.perMin * durationMin) * t.multiplier * surge
+   412→  return Math.round(raw / 10) * 10
+   413→}
+   414→
+   415→// ============================== Пул водителей ==============================
+   416→
+   417→const FIRST_NAMES = [
+   418→  'Алексей', 'Артём', 'Виктор', 'Дмитрий', 'Игорь', 'Марат', 'Николай', 'Олег',
+   419→  'Павел', 'Роман', 'Сергей', 'Тимур', 'Юрий', 'Ильдар', 'Вадим', 'Кирилл',
+   420→] as const
+   421→const LAST_NAMES = [
+   422→  'Соколов', 'Кузнецов', 'Волков', 'Попов', 'Лебедев', 'Козлов', 'Новиков', 'Морозов',
+   423→  'Петров', 'Фролов', 'Гусев', 'Ларионов', 'Мухаметов', 'Сафин', 'Зайцев', 'Белов',
+   424→] as const
+   425→const PATRONYMICS = [
+   426→  'Сергеевич', 'Андреевич', 'Владимирович', 'Иванович', 'Александрович',
+   427→  'Романович', 'Маратович', 'Ильдарович', 'Николаевич', 'Юрьевич',
+   428→] as const
+   429→const CARS = [
+   430→  'Toyota Camry, серебристый', 'Kia Rio, белый', 'Hyundai Solaris, серый',
+   431→  'Skoda Octavia, чёрный', 'Volkswagen Polo, красный', 'Toyota Corolla, бежевый',
+   432→  'Renault Logan, белый', 'Lada Vesta, графитовый', 'Hyundai Elantra, тёмно-серый',
+   433→  'Kia Cerato, серебристый', 'Toyota Camry, чёрный', 'Skoda Superb, белый',
+   434→] as const
+   435→const PLATE_LETTERS = ['А', 'В', 'Е', 'К', 'М', 'Н', 'О', 'Р', 'С', 'Т', 'У', 'Х'] as const
+   436→
+   437→function makeDriver(): DriverInfo {
+   438→  const first = pick(FIRST_NAMES)
+   439→  const patronymic = pick(PATRONYMICS)
+   440→  const last = pick(LAST_NAMES)
+   441→  return {
+   442→    name: `${last} ${first} ${patronymic}`,
+   443→    initials: `${first[0]}.${patronymic[0]}.`,
+   444→    car: pick(CARS),
+   445→    plate: `${pick(PLATE_LETTERS)} ${randInt(100, 999)} ${pick(PLATE_LETTERS)}${pick(PLATE_LETTERS)} ${randInt(77, 99)}`,
+   446→    rating: round1(randFloat(4.6, 5.0)),
+   447→    rides: randInt(340, 12800),
+   448→  }
+   449→}
+   450→
+   451→/** 12 предгенерированных водителей для назначения пассажирам */
+   452→const DRIVER_POOL: DriverInfo[] = Array.from({ length: 12 }, () => makeDriver())
+   453→
+   454→// ============================== Лента заказов ==============================
+   455→
+   456→const MAX_FEED = 8
+   457→const orders = new Map<string, OrderDTO>()
+   458→let orderCounter = 1000
+   459→let rideCounter = 5000
+   460→
+   461→function nextOrderId(): string {
+   462→  orderCounter += 1
+   463→  return `ORD-${orderCounter}`
+   464→}
+   465→
+   466→function nextRideId(): string {
+   467→  rideCounter += 1
+   468→  return `RD-${rideCounter}`
+   469→}
+   470→
+   471→/** Геометрическая дистанция между зонами в км (карта 1000x600 нормированная) */
+   472→function zoneDistanceKm(a: ZoneState, b: ZoneState): number {
+   473→  const dx = a.x - b.x
+   474→  const dy = a.y - b.y
+   475→  const km = Math.sqrt(dx * dx + dy * dy) * 0.038 * randFloat(0.88, 1.12)
+   476→  return round1(clamp(km, 2, 28))
+   477→}
+   478→
+   479→function createOrder(): void {
+   480→  if (orders.size >= MAX_FEED) return
+   481→  const fromZone = pick(ZONES)
+   482→  const toZone = pick(ZONES.filter((z) => z.id !== fromZone.id))
+   483→  const tariff = pickWeightedTariff()
+   484→  const distanceKm =
+   485→    tariff.id === 'intercity' ? round1(randFloat(18, 28)) : zoneDistanceKm(fromZone, toZone)
+   486→  const durationMin = round1(distanceKm * 2.2 + 4)
+   487→  const surge = surgeForZone(fromZone.id)
+   488→  const priceTotal = computePrice(tariff, distanceKm, durationMin, surge)
+   489→  const driverPayout = Math.round(priceTotal * 0.92)
+   490→  const createdAt = new Date()
+   491→  const order: OrderDTO = {
+   492→    id: nextOrderId(),
+   493→    from: pickAddressFor(fromZone),
+   494→    to: pickAddressFor(toZone),
+   495→    distanceKm,
+   496→    durationMin,
+   497→    tariff: { id: tariff.id, name: tariff.name, multiplier: round2(tariff.multiplier) },
+   498→    priceTotal,
+   499→    driverPayout,
+   500→    commissionRub: priceTotal - driverPayout,
+   501→    surge: round2(surge),
+   502→    createdAt: createdAt.toISOString(),
+   503→    expiresAt: new Date(createdAt.getTime() + randInt(35, 60) * 1000).toISOString(),
+   504→  }
+   505→  orders.set(order.id, order)
+   506→  io.to('drivers').emit('orders:new', { order })
+   507→  log(
+   508→    `заказ ${order.id}: ${order.from.label} -> ${order.to.label}, ${order.distanceKm} км, ${order.priceTotal} руб (${order.tariff.id}${order.surge > 1 ? `, surge ${order.surge}` : ''})`,
+   509→  )
+   510→}
+   511→
+   512→function removeOrder(id: string, reason: 'taken' | 'expired'): boolean {
+   513→  if (!orders.delete(id)) return false
+   514→  io.to('drivers').emit('orders:remove', { id, reason })
+   515→  return true
+   516→}
+   517→
+   518→/** Жизнь заказа 35..60 сек, потом истекает */
+   519→function expireOrders(): void {
+   520→  const now = Date.now()
+   521→  for (const order of orders.values()) {
+   522→    if (now >= Date.parse(order.expiresAt)) {
+   523→      removeOrder(order.id, 'expired')
+   524→      log(`заказ ${order.id} истёк`)
+   525→    }
+   526→  }
+   527→}
+   528→
+   529→/** Другие водители иногда забирают заказы из ленты */
+   530→function simulateOtherDriverTake(): void {
+   531→  if (orders.size === 0 || Math.random() >= 0.35) return
+   532→  const arr = [...orders.values()]
+   533→  const order = arr[randInt(0, arr.length - 1)]
+   534→  if (removeOrder(order.id, 'taken')) {
+   535→    log(`заказ ${order.id} забрал другой водитель`)
+   536→  }
+   537→}
+   538→
+   539→// ============================== Живая статистика ==============================
+   540→
+   541→const stats: LiveStatsDTO = {
+   542→  activeDrivers: 63,
+   543→  onlineDrivers: 188,
+   544→  ordersPerHour: 512,
+   545→  avgWaitSec: 254,
+   546→  completedToday: 12437,
+   547→  grossTodayRub: 5604800,
+   548→}
+   549→
+   550→let bgRideAccumulator = 0
+   551→
+   552→function tickStats(): void {
+   553→  stats.activeDrivers = Math.round(clamp(stats.activeDrivers + randFloat(-3, 3), 40, 90))
+   554→  stats.onlineDrivers = Math.round(clamp(stats.onlineDrivers + randFloat(-6, 6), 120, 260))
+   555→  stats.ordersPerHour = Math.round(clamp(stats.ordersPerHour + randFloat(-15, 15), 300, 700))
+   556→  stats.avgWaitSec = Math.round(clamp(stats.avgWaitSec + randFloat(-12, 12), 90, 420))
+   557→  // фоновые завершённые поездки: темп ~ ordersPerHour в час
+   558→  bgRideAccumulator += (stats.ordersPerHour / 3600) * 5
+   559→  let n = Math.floor(bgRideAccumulator)
+   560→  bgRideAccumulator -= n
+   561→  while (n > 0) {
+   562→    n -= 1
+   563→    stats.completedToday += 1
+   564→    stats.grossTodayRub += computePrice(pickWeightedTariff(), round1(randFloat(3, 22)), round1(randFloat(10, 52)), 1)
+   565→  }
+   566→}
+   567→
+   568→// ============================== Жизненный цикл поездки ==============================
+   569→
+   570→/** Подсказки фазы поиска водителя (ротация каждые 2 сек) */
+   571→const SEARCH_HINTS = [
+   572→  () => 'Ищем ближайшего водителя...',
+   573→  () => `Найдено ${pick([5, 8, 11, 12, 14, 17, 25, 28])} водителей рядом`,
+   574→  () => 'Подбираем машину под ваш тариф...',
+   575→  () => 'Согласовываем заказ с водителем...',
+   576→  () => 'Осталось совсем немного...',
+   577→] as const
+   578→
+   579→interface RideSession {
+   580→  ride: RideDTO
+   581→  timer: ReturnType<typeof setInterval> | null
+   582→  perspective: 'passenger' | 'driver'
+   583→  phase: RideStatus | 'done'
+   584→  searchTicksLeft: number // тиков по 2 сек до назначения водителя (3..6 => 6..12 сек)
+   585→  hintIndex: number
+   586→  arriveEtaStart: number
+   587→  durationMin: number
+   588→}
+   589→
+   590→function hintFor(session: RideSession): string {
+   591→  if (session.phase === 'searching') {
+   592→    return SEARCH_HINTS[session.hintIndex % SEARCH_HINTS.length]()
+   593→  }
+   594→  if (session.phase === 'arriving') {
+   595→    return session.perspective === 'driver' ? 'Вы едете к пассажиру' : 'Водитель выехал к вам'
+   596→  }
+   597→  if (session.phase === 'onboard') {
+   598→    return session.perspective === 'driver'
+   599→      ? 'Пассажир в салоне, следуйте к точке назначения'
+   600→      : 'Вы в пути'
+   601→  }
+   602→  return 'Поездка завершена'
+   603→}
+   604→
+   605→function emitRideState(socket: Socket, session: RideSession): void {
+   606→  socket.emit('ride:state', { ride: session.ride, hint: hintFor(session) })
+   607→}
+   608→
+   609→function startRideLifecycle(
+   610→  socket: Socket,
+   611→  ride: RideDTO,
+   612→  perspective: 'passenger' | 'driver',
+   613→  durationMin: number,
+   614→): void {
+   615→  const client = clients.get(socket.id)
+   616→  if (!client) return
+   617→  if (client.session?.timer) {
+   618→    clearInterval(client.session.timer)
+   619→    log(`поездка ${client.session.ride.id} прервана (новая поездка)`)
+   620→  }
+   621→  const session: RideSession = {
+   622→    ride,
+   623→    timer: null,
+   624→    perspective,
+   625→    phase: ride.status,
+   626→    searchTicksLeft: perspective === 'passenger' ? randInt(3, 6) : 0,
+   627→    hintIndex: 0,
+   628→    arriveEtaStart: ride.etaMin,
+   629→    durationMin,
+   630→  }
+   631→  client.session = session
+   632→  emitRideState(socket, session)
+   633→  session.timer = setInterval(() => {
+   634→    try {
+   635→      tickRide(socket, session)
+   636→    } catch (err) {
+   637→      log(`ошибка тика поездки: ${err instanceof Error ? err.message : String(err)}`)
+   638→    }
+   639→  }, 2000)
+   640→}
+   641→
+   642→function tickRide(socket: Socket, session: RideSession): void {
+   643→  const ride = session.ride
+   644→  if (session.phase === 'searching') {
+   645→    session.hintIndex += 1
+   646→    emitRideState(socket, session)
+   647→    session.searchTicksLeft -= 1
+   648→    if (session.searchTicksLeft <= 0) {
+   649→      ride.driver = { ...pick(DRIVER_POOL) }
+   650→      ride.status = 'arriving'
+   651→      ride.progress = 0
+   652→      ride.etaMin = randInt(3, 7)
+   653→      session.phase = 'arriving'
+   654→      session.arriveEtaStart = ride.etaMin
+   655→      emitRideState(socket, session)
+   656→      log(`поездка ${ride.id}: назначен водитель ${ride.driver.name}, ${ride.driver.car}, подача ~${ride.etaMin} мин`)
+   657→    }
+   658→    return
+   659→  }
+   660→  if (session.phase === 'arriving') {
+   661→    ride.progress = Math.min(0.25, round2(ride.progress + randFloat(0.07, 0.09)))
+   662→    ride.etaMin = Math.max(1, Math.ceil(session.arriveEtaStart * (1 - ride.progress / 0.25)))
+   663→    if (ride.progress >= 0.25) {
+   664→      ride.status = 'onboard'
+   665→      ride.etaMin = Math.max(1, Math.round(session.durationMin))
+   666→      session.phase = 'onboard'
+   667→      log(`поездка ${ride.id}: пассажир в салоне, в пути ${ride.etaMin} мин`)
+   668→    }
+   669→    emitRideState(socket, session)
+   670→    return
+   671→  }
+   672→  if (session.phase === 'onboard') {
+   673→    ride.progress = Math.min(1, round2(ride.progress + randFloat(0.033, 0.042)))
+   674→    ride.etaMin = Math.max(0, Math.round(session.durationMin * (1 - (ride.progress - 0.25) / 0.75)))
+   675→    if (ride.progress >= 1) {
+   676→      ride.progress = 1
+   677→      ride.etaMin = 0
+   678→      ride.status = 'completed'
+   679→      session.phase = 'done'
+   680→      completeRide(socket, session)
+   681→    } else {
+   682→      emitRideState(socket, session)
+   683→    }
+   684→    return
+   685→  }
+   686→  if (session.timer) {
+   687→    clearInterval(session.timer)
+   688→    session.timer = null
+   689→  }
+   690→}
+   691→
+   692→function completeRide(socket: Socket, session: RideSession): void {
+   693→  const ride = session.ride
+   694→  if (session.timer) {
+   695→    clearInterval(session.timer)
+   696→    session.timer = null
+   697→  }
+   698→  const price = ride.priceTotal
+   699→  const payout = Math.round(price * 0.92)
+   700→  const receipt: ReceiptDTO = {
+   701→    price,
+   702→    driverPayout: payout,
+   703→    commissionRub: price - payout,
+   704→    tip: 0,
+   705→  }
+   706→  socket.emit('ride:completed', {
+   707→    ride: { ...ride, driver: ride.driver ? { ...ride.driver } : null },
+   708→    receipt,
+   709→  })
+   710→  stats.completedToday += 1
+   711→  stats.grossTodayRub += price
+   712→  log(`поездка ${ride.id}: завершена, ${price} руб (выплата водителю ${payout})`)
+   713→  const client = clients.get(socket.id)
+   714→  if (client && client.role === 'driver' && client.earnings) {
+   715→    client.earnings.gross += price
+   716→    client.earnings.payout += payout
+   717→    client.earnings.commission += price - payout
+   718→    client.earnings.rides += 1
+   719→    client.earnings.hoursOnline = round1(client.earnings.hoursOnline + 0.1)
+   720→    client.lastRides.unshift({ ...ride, driver: ride.driver ? { ...ride.driver } : null })
+   721→    client.lastRides = client.lastRides.slice(0, 5)
+   722→    socket.emit('driver:earnings', {
+   723→      today: { ...client.earnings },
+   724→      lastRides: client.lastRides.map((r) => ({ ...r, driver: r.driver ? { ...r.driver } : null })),
+   725→    })
+   726→  }
+   727→}
+   728→
+   729→/** 3 последние завершённые поездки для стартового драйвер-дэша */
+   730→function makeLastRides(driver: DriverInfo): RideDTO[] {
+   731→  const rides: RideDTO[] = []
+   732→  for (let i = 0; i < 3; i++) {
+   733→    const from = randomAddress()
+   734→    const to = randomAddress(from.zoneId)
+   735→    const t = pick([TARIFFS[0], TARIFFS[1], TARIFFS[2]])
+   736→    const d = round1(randFloat(4, 18))
+   737→    const price = computePrice(t, d, round1(d * 2.2 + 4), 1)
+   738→    rides.push({
+   739→      id: nextRideId(),
+   740→      status: 'completed',
+   741→      driver: { ...driver },
+   742→      from,
+   743→      to,
+   744→      distanceKm: d,
+   745→      etaMin: 0,
+   746→      progress: 1,
+   747→      priceTotal: price,
+   748→      driverPayout: Math.round(price * 0.92),
+   749→      tariffName: t.name,
+   750→      startedAt: new Date(Date.now() - randInt(30, 360) * 60000).toISOString(),
+   751→    })
+   752→  }
+   753→  return rides.sort((a, b) => (a.startedAt < b.startedAt ? 1 : -1))
+   754→}
+   755→
+   756→// ============================== Состояние клиентов ==============================
+   757→
+   758→interface ClientState {
+   759→  role: 'driver' | 'passenger' | null
+   760→  online: boolean
+   761→  identity: DriverInfo | null
+   762→  earnings: EarningsToday | null
+   763→  lastRides: RideDTO[]
+   764→  session: RideSession | null
+   765→}
+   766→
+   767→/** socketId -> состояние (в т.ч. активная поездка с таймером) */
+   768→const clients = new Map<string, ClientState>()
+   769→
+   770→// ============================== socket.io ==============================
+   771→
+   772→const httpServer = createServer()
+   773→const io = new Server(httpServer, {
+   774→  // путь по умолчанию /socket.io — на нём Caddy проксирует трафик с XTransformPort=3003
+   775→  cors: { origin: '*', methods: ['GET', 'POST'] },
+   776→  pingTimeout: 60000,
+   777→  pingInterval: 25000,
+   778→})
+   779→
+   780→io.on('connection', (socket: Socket) => {
+   781→  clients.set(socket.id, {
+   782→    role: null,
+   783→    online: false,
+   784→    identity: null,
+   785→    earnings: null,
+   786→    lastRides: [],
+   787→    session: null,
+   788→  })
+   789→  log(`подключение ${socket.id.slice(0, 8)} (клиентов: ${clients.size})`)
+   790→
+   791→  socket.on(
+   792→    'driver:join',
+   793→    safe(() => {
+   794→      const client = clients.get(socket.id)
+   795→      if (!client) return
+   796→      client.role = 'driver'
+   797→      void socket.join('drivers')
+   798→      if (!client.identity) client.identity = makeDriver()
+   799→      if (!client.earnings) {
+   800→        // старт смены: правдоподобные числа вокруг ~27 поездок / ~12 480 руб
+   801→        const ridesDone = randInt(20, 34)
+   802→        const gross = ridesDone * randInt(420, 500)
+   803→        const payout = Math.round(gross * 0.92)
+   804→        client.earnings = {
+   805→          gross,
+   806→          payout,
+   807→          commission: gross - payout,
+   808→          rides: ridesDone,
+   809→          hoursOnline: round1(randFloat(6.5, 9.5)),
+   810→        }
+   811→        client.lastRides = makeLastRides(client.identity)
+   812→      }
+   813→      socket.emit('feed:state', { orders: [...orders.values()] })
+   814→      socket.emit('demand:state', { zones: zoneDTOs(), updatedAt: new Date().toISOString() })
+   815→      socket.emit('stats:live', { ...stats })
+   816→      socket.emit('driver:earnings', {
+   817→        today: { ...client.earnings },
+   818→        lastRides: client.lastRides.map((r) => ({ ...r, driver: r.driver ? { ...r.driver } : null })),
+   819→      })
+   820→      log(`водитель вошёл: ${socket.id.slice(0, 8)} (${client.identity.name})`)
+   821→    }),
+   822→  )
+   823→
+   824→  socket.on(
+   825→    'passenger:join',
+   826→    safe(() => {
+   827→      const client = clients.get(socket.id)
+   828→      if (!client) return
+   829→      if (client.role === 'driver') void socket.leave('drivers')
+   830→      client.role = 'passenger'
+   831→      socket.emit('demand:state', { zones: zoneDTOs(), updatedAt: new Date().toISOString() })
+   832→      socket.emit('stats:live', { ...stats })
+   833→      log(`пассажир вошёл: ${socket.id.slice(0, 8)}`)
+   834→    }),
+   835→  )
+   836→
+   837→  socket.on(
+   838→    'driver:go-online',
+   839→    safe(() => {
+   840→      const client = clients.get(socket.id)
+   841→      if (!client) return
+   842→      client.online = true
+   843→      socket.emit('driver:online', { online: true })
+   844→    }),
+   845→  )
+   846→
+   847→  socket.on(
+   848→    'driver:go-offline',
+   849→    safe(() => {
+   850→      const client = clients.get(socket.id)
+   851→      if (!client) return
+   852→      client.online = false
+   853→      socket.emit('driver:online', { online: false })
+   854→    }),
+   855→  )
+   856→
+   857→  socket.on(
+   858→    'driver:decline',
+   859→    safeArg<unknown>((raw) => {
+   860→      // Отказ от заказа — БЕЗ штрафа и понижения приоритета (наш дифференциатор)
+   861→      const p = isObj(raw)
+   862→      const orderId = typeof p.orderId === 'string' ? p.orderId : '(без id)'
+   863→      log(`водитель ${socket.id.slice(0, 8)} отказался от заказа ${orderId} — без штрафа`)
+   864→    }),
+   865→  )
+   866→
+   867→  socket.on(
+   868→    'passenger:book',
+   869→    safeArg<unknown>((raw) => {
+   870→      const p = isObj(raw)
+   871→      const client = clients.get(socket.id)
+   872→      if (!client) return
+   873→      if (client.role !== 'passenger') client.role = 'passenger'
+   874→      // частичные/пустые поля -> случайные значения
+   875→      const fromRaw = typeof p.from === 'string' && p.from.trim() !== '' ? p.from.trim() : null
+   876→      const toRaw = typeof p.to === 'string' && p.to.trim() !== '' ? p.to.trim() : null
+   877→      const tariff = resolveTariff(typeof p.tariffId === 'string' ? p.tariffId : null)
+   878→      const from = fromRaw ? resolveAddress(fromRaw) : randomAddress()
+   879→      const to = toRaw ? resolveAddress(toRaw) : randomAddress(from.zoneId)
+   880→      const distanceKm = round1(3 + 21 * Math.random() * Math.random()) // 3..24 км
+   881→      const durationMin = round1(distanceKm * 2.2 + 4)
+   882→      const surge = surgeForZone(from.zoneId)
+   883→      const priceTotal = computePrice(tariff, distanceKm, durationMin, surge)
+   884→      const ride: RideDTO = {
+   885→        id: nextRideId(),
+   886→        status: 'searching',
+   887→        driver: null,
+   888→        from,
+   889→        to,
+   890→        distanceKm,
+   891→        etaMin: randInt(3, 6),
+   892→        progress: 0,
+   893→        priceTotal,
+   894→        driverPayout: Math.round(priceTotal * 0.92),
+   895→        tariffName: tariff.name,
+   896→        startedAt: new Date().toISOString(),
+   897→      }
+   898→      startRideLifecycle(socket, ride, 'passenger', durationMin)
+   899→      log(
+   900→        `пассажир ${socket.id.slice(0, 8)} заказал: ${from.label} -> ${to.label} (${tariff.id}, ${priceTotal} руб)`,
+   901→      )
+   902→    }),
+   903→  )
+   904→
+   905→  socket.on(
+   906→    'ride:rate',
+   907→    safeArg<unknown>((raw) => {
+   908→      const p = isObj(raw)
+   909→      const rideId = typeof p.rideId === 'string' ? p.rideId : '(без id)'
+   910→      const tipNum = typeof p.tip === 'number' ? p.tip : Number(p.tip)
+   911→      const tip = Number.isFinite(tipNum) ? Math.max(0, Math.round(tipNum)) : 0
+   912→      const message =
+   913→        tip > 0
+   914→          ? 'Спасибо! Оценка сохранена. Чаевые 100% переданы водителю.'
+   915→          : 'Спасибо! Оценка сохранена.'
+   916→      socket.emit('ride:rated', { ok: true, message })
+   917→      log(`оценка поездки ${rideId} принята (чаевые: ${tip} руб)`)
+   918→    }),
+   919→  )
+   920→
+   921→  socket.on(
+   922→    'driver:accept',
+   923→    safeArg<unknown>((raw) => {
+   924→      const p = isObj(raw)
+   925→      const orderId = typeof p.orderId === 'string' ? p.orderId : ''
+   926→      const client = clients.get(socket.id)
+   927→      if (!client) return
+   928→      const order = orderId !== '' ? orders.get(orderId) : undefined
+   929→      if (!order) {
+   930→        socket.emit('driver:accept-failed', { orderId, reason: 'taken' })
+   931→        log(`водитель ${socket.id.slice(0, 8)}: заказ ${orderId || '(пусто)'} уже недоступен`)
+   932→        return
+   933→      }
+   934→      if (client.session && client.session.phase !== 'done' && client.session.timer) {
+   935→        socket.emit('driver:accept-failed', { orderId, reason: 'busy' })
+   936→        log(`водитель ${socket.id.slice(0, 8)}: заказ ${orderId} отклонён (уже в поездке)`)
+   937→        return
+   938→      }
+   939→      orders.delete(orderId)
+   940→      // заказ удалён глобально, orders:remove получает и сам принимающий сокет
+   941→      io.to('drivers').emit('orders:remove', { id: orderId, reason: 'taken' })
+   942→      const identity = client.identity ?? makeDriver()
+   943→      const ride: RideDTO = {
+   944→        id: nextRideId(),
+   945→        status: 'arriving',
+   946→        driver: { ...identity },
+   947→        from: { ...order.from },
+   948→        to: { ...order.to },
+   949→        distanceKm: order.distanceKm,
+   950→        etaMin: randInt(3, 7),
+   951→        progress: 0,
+   952→        priceTotal: order.priceTotal,
+   953→        driverPayout: order.driverPayout,
+   954→        tariffName: order.tariff.name,
+   955→        startedAt: new Date().toISOString(),
+   956→      }
+   957→      startRideLifecycle(socket, ride, 'driver', order.durationMin)
+   958→      log(`водитель ${socket.id.slice(0, 8)} принял заказ ${orderId}: ${order.priceTotal} руб, выплата ${order.driverPayout}`)
+   959→    }),
+   960→  )
+   961→
+   962→  socket.on('disconnect', () => {
+   963→    const client = clients.get(socket.id)
+   964→    if (client?.session?.timer) {
+   965→      clearInterval(client.session.timer)
+   966→      log(`поездка ${client.session.ride.id} остановлена (клиент отключился)`)
+   967→    }
+   968→    clients.delete(socket.id)
+   969→    log(`отключение ${socket.id.slice(0, 8)} (клиентов: ${clients.size})`)
+   970→  })
+   971→})
+   972→
+   973→// ============================== Запуск и таймеры ==============================
+   974→
+   975→// Главный тик 5 сек: спрос по зонам + живая статистика -> всем сокетам
+   976→setInterval(() => {
+   977→  try {
+   978→    tickZones()
+   979→    io.emit('demand:state', { zones: zoneDTOs(), updatedAt: new Date().toISOString() })
+   980→    tickStats()
+   981→    io.emit('stats:live', { ...stats })
+   982→  } catch (err) {
+   983→    log(`ошибка 5-сек тика: ${err instanceof Error ? err.message : String(err)}`)
+   984→  }
+   985→}, 5000)
+   986→
+   987→// Проверка истечения заказов — каждую секунду
+   988→setInterval(() => {
+   989→  try {
+   990→    expireOrders()
+   991→  } catch (err) {
+   992→    log(`ошибка проверки заказов: ${err instanceof Error ? err.message : String(err)}`)
+   993→  }
+   994→}, 1000)
+   995→
+   996→// Прочие водители забирают заказы — примерно раз в 15 сек
+   997→setInterval(() => {
+   998→  try {
+   999→    simulateOtherDriverTake()
+  1000→  } catch (err) {
+  1001→    log(`ошибка симуляции водителей: ${err instanceof Error ? err.message : String(err)}`)
+  1002→  }
+  1003→}, 15000)
+  1004→
+  1005→// Создание заказов: случайный интервал 4..9 сек
+  1006→function scheduleOrderCreation(): void {
+  1007→  setTimeout(() => {
+  1008→    try {
+  1009→      createOrder()
+  1010→    } catch (err) {
+  1011→      log(`ошибка создания заказа: ${err instanceof Error ? err.message : String(err)}`)
+  1012→    }
+  1013→    scheduleOrderCreation()
+  1014→  }, randInt(4000, 9000))
+  1015→}
+  1016→
+  1017→process.on('uncaughtException', (err) => {
+  1018→  log(`uncaughtException: ${err.message}`)
+  1019→})
+  1020→process.on('unhandledRejection', (reason) => {
+  1021→  log(`unhandledRejection: ${String(reason)}`)
+  1022→})
+  1023→
+  1024→httpServer.listen(PORT, () => {
+  1025→  log(`ПРЯМО ride-engine запущен: порт ${PORT}, путь /socket.io`)
+  1026→  log(`зон: ${ZONES.length}, водителей в пуле: ${DRIVER_POOL.length}, тарифов: ${TARIFFS.length}`)
+  1027→  for (let i = 0; i < 4; i++) {
+  1028→    createOrder()
+  1029→  }
+  1030→  scheduleOrderCreation()
+  1031→})
+  1032→

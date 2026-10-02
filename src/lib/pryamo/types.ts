@@ -72,6 +72,8 @@ export interface OrderDTO {
   surge: number
   createdAt: string
   expiresAt: string
+  /** Сколько водителей сейчас видят этот заказ (аукцион) */
+  watchingDrivers?: number
 }
 
 export interface ZoneDTO {
@@ -133,6 +135,15 @@ export interface EarningsToday {
   commission: number
   rides: number
   hoursOnline: number
+}
+
+/** День истории дохода за неделю: оборот, выплата ПРЯМО и гипотеза «у монополиста» (−40%) */
+export interface WeekDay {
+  day: string
+  gross: number
+  payout: number
+  yandexPayout: number
+  isToday: boolean
 }
 
 export interface CalculatorResult {

@@ -88,6 +88,8 @@ export interface OrderDTO {
   surge: number
   createdAt: string
   expiresAt: string
+  /** Сколько водителей сейчас видят этот заказ в своих лентах (аукцион, а не очередь) */
+  watchingDrivers: number
 }
 
 export interface ZoneDTO {
@@ -142,6 +144,15 @@ export interface EarningsToday {
   commission: number
   rides: number
   hoursOnline: number
+}
+
+/** День недели в истории дохода: оборот, выплата на ПРЯМО и «что дал бы» монополист (−40%) */
+export interface WeekDayDTO {
+  day: string
+  gross: number
+  payout: number
+  yandexPayout: number
+  isToday: boolean
 }
 
 export interface LiveStatsDTO {
@@ -488,6 +499,10 @@ function createOrder(): void {
   const priceTotal = computePrice(tariff, distanceKm, durationMin, surge)
   const driverPayout = Math.round(priceTotal * 0.92)
   const createdAt = new Date()
+  // конкуренция за заказ: чем выше спрос в зоне подачи, тем больше водителей рядом видят ленту
+  const watchingDrivers = Math.round(
+    clamp(6 + fromZone.demand / 7 + randInt(-2, 3), 3, 24),
+  )
   const order: OrderDTO = {
     id: nextOrderId(),
     from: pickAddressFor(fromZone),
@@ -501,11 +516,12 @@ function createOrder(): void {
     surge: round2(surge),
     createdAt: createdAt.toISOString(),
     expiresAt: new Date(createdAt.getTime() + randInt(35, 60) * 1000).toISOString(),
+    watchingDrivers,
   }
   orders.set(order.id, order)
   io.to('drivers').emit('orders:new', { order })
   log(
-    `заказ ${order.id}: ${order.from.label} -> ${order.to.label}, ${order.distanceKm} км, ${order.priceTotal} руб (${order.tariff.id}${order.surge > 1 ? `, surge ${order.surge}` : ''})`,
+    `заказ ${order.id}: ${order.from.label} -> ${order.to.label}, ${order.distanceKm} км, ${order.priceTotal} руб (${order.tariff.id}${order.surge > 1 ? `, surge ${order.surge}` : ''}, видят ${order.watchingDrivers} водителей`,
   )
 }
 
@@ -717,10 +733,12 @@ function completeRide(socket: Socket, session: RideSession): void {
     client.earnings.commission += price - payout
     client.earnings.rides += 1
     client.earnings.hoursOnline = round1(client.earnings.hoursOnline + 0.1)
+    client.week = syncWeekToday(client.week, client.earnings.gross)
     client.lastRides.unshift({ ...ride, driver: ride.driver ? { ...ride.driver } : null })
     client.lastRides = client.lastRides.slice(0, 5)
     socket.emit('driver:earnings', {
       today: { ...client.earnings },
+      week: client.week.map((d) => ({ ...d })),
       lastRides: client.lastRides.map((r) => ({ ...r, driver: r.driver ? { ...r.driver } : null })),
     })
   }
@@ -753,6 +771,49 @@ function makeLastRides(driver: DriverInfo): RideDTO[] {
   return rides.sort((a, b) => (a.startedAt < b.startedAt ? 1 : -1))
 }
 
+// ============================== История дохода за неделю ==============================
+
+const WEEK_DAYS = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'] as const // getDay(): 0=Вс
+
+/**
+ * 7 дней истории: 6 прошлых дней — правдоподобный оборот, сегодня — живые данные смены.
+ * Пятница/суббота обычно сильнее (вечерний спрос), середина — ровнее.
+ */
+function makeWeekHistory(todayGross: number): WeekDayDTO[] {
+  const today = new Date()
+  const days: WeekDayDTO[] = []
+  for (let i = 6; i >= 0; i -= 1) {
+    const d = new Date(today.getTime() - i * 86400000)
+    const dow = d.getDay()
+    const isToday = i === 0
+    let gross: number
+    if (isToday) {
+      gross = todayGross
+    } else {
+      // база 9..14 тыс, пятница/суббота бонусом
+      gross = randInt(9, 14) * 1000 + randInt(0, 900)
+      if (dow === 5 || dow === 6) gross += randInt(1200, 2600)
+    }
+    days.push({
+      day: WEEK_DAYS[dow],
+      gross,
+      payout: Math.round(gross * 0.92),
+      yandexPayout: Math.round(gross * 0.6),
+      isToday,
+    })
+  }
+  return days
+}
+
+/** Сегодняшняя запись недели догоняет живой оборот смены */
+function syncWeekToday(week: WeekDayDTO[], gross: number): WeekDayDTO[] {
+  return week.map((d) =>
+    d.isToday
+      ? { ...d, gross, payout: Math.round(gross * 0.92), yandexPayout: Math.round(gross * 0.6) }
+      : d,
+  )
+}
+
 // ============================== Состояние клиентов ==============================
 
 interface ClientState {
@@ -760,6 +821,7 @@ interface ClientState {
   online: boolean
   identity: DriverInfo | null
   earnings: EarningsToday | null
+  week: WeekDayDTO[]
   lastRides: RideDTO[]
   session: RideSession | null
 }
@@ -783,6 +845,7 @@ io.on('connection', (socket: Socket) => {
     online: false,
     identity: null,
     earnings: null,
+    week: [],
     lastRides: [],
     session: null,
   })
@@ -810,11 +873,13 @@ io.on('connection', (socket: Socket) => {
         }
         client.lastRides = makeLastRides(client.identity)
       }
+      if (client.week.length === 0) client.week = makeWeekHistory(client.earnings.gross)
       socket.emit('feed:state', { orders: [...orders.values()] })
       socket.emit('demand:state', { zones: zoneDTOs(), updatedAt: new Date().toISOString() })
       socket.emit('stats:live', { ...stats })
       socket.emit('driver:earnings', {
         today: { ...client.earnings },
+        week: client.week.map((d) => ({ ...d })),
         lastRides: client.lastRides.map((r) => ({ ...r, driver: r.driver ? { ...r.driver } : null })),
       })
       log(`водитель вошёл: ${socket.id.slice(0, 8)} (${client.identity.name})`)

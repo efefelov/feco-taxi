@@ -209,16 +209,16 @@ export function PainPoints() {
 
         <Tabs value={tab} onValueChange={setTab} className="mt-10">
           <div className="flex justify-center">
-            <TabsList className="h-12 rounded-2xl bg-white p-1.5 shadow-md ring-1 ring-zinc-200">
+            <TabsList className="grid h-auto w-full max-w-md grid-cols-1 gap-1.5 rounded-2xl bg-white p-1.5 shadow-md ring-1 ring-zinc-200 sm:grid-cols-2">
               <TabsTrigger
                 value="driver"
-                className="h-9 rounded-xl px-6 text-sm font-bold data-[state=active]:bg-rose-500 data-[state=active]:text-white"
+                className="h-9 w-full rounded-xl px-4 text-xs font-bold text-zinc-500 data-[state=active]:bg-rose-500 data-[state=active]:text-white sm:px-6 sm:text-sm"
               >
                 Боли водителей ({DRIVER_PAINS.length})
               </TabsTrigger>
               <TabsTrigger
                 value="passenger"
-                className="h-9 rounded-xl px-6 text-sm font-bold data-[state=active]:bg-zinc-900 data-[state=active]:text-white"
+                className="h-9 w-full rounded-xl px-4 text-xs font-bold text-zinc-500 data-[state=active]:bg-zinc-900 data-[state=active]:text-white sm:px-6 sm:text-sm"
               >
                 Боли пассажиров ({PASSENGER_PAINS.length})
               </TabsTrigger>

@@ -8,6 +8,7 @@ import type {
   OrderDTO,
   RideDTO,
   Receipt,
+  WeekDay,
   ZoneDTO,
 } from '@/lib/pryamo/types'
 
@@ -153,6 +154,7 @@ export interface DriverRideHandlers {
 export function useDriverRide(handlers: DriverRideHandlers) {
   const socketRef = useRef<Socket | null>(null)
   const [earnings, setEarnings] = useState<EarningsToday | null>(null)
+  const [week, setWeek] = useState<WeekDay[]>([])
   const [lastRides, setLastRides] = useState<RideDTO[]>([])
   const handlersRef = useRef(handlers)
 
@@ -174,8 +176,13 @@ export function useDriverRide(handlers: DriverRideHandlers) {
     s.on('ride:completed', (d: { ride: RideDTO; receipt: Receipt }) =>
       handlersRef.current.onCompleted(d.ride, d.receipt)
     )
-    s.on('driver:earnings', (d: { today: EarningsToday; lastRides: RideDTO[] }) => {
+    s.on('driver:earnings', (d: {
+      today: EarningsToday
+      week?: WeekDay[]
+      lastRides: RideDTO[]
+    }) => {
       setEarnings(d.today)
+      if (d.week) setWeek(d.week)
       setLastRides(d.lastRides ?? [])
       handlersRef.current.onEarnings(d.today, d.lastRides ?? [])
     })
@@ -191,5 +198,5 @@ export function useDriverRide(handlers: DriverRideHandlers) {
   const accept = (orderId: string) => socketRef.current?.emit('driver:accept', { orderId })
   const decline = (orderId: string) => socketRef.current?.emit('driver:decline', { orderId })
 
-  return { accept, decline, earnings, lastRides }
+  return { accept, decline, earnings, week, lastRides }
 }

@@ -3,6 +3,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ReferenceDot,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
+import {
   Radio,
   TrendingUp,
   Users,
@@ -14,6 +24,7 @@ import {
   MapPin,
   CarFront,
   Check,
+  Eye,
   Handshake,
   ShieldCheck,
 } from 'lucide-react'
@@ -24,7 +35,7 @@ import { CityMap } from './city-map'
 import { DemandForecast } from './demand-forecast'
 import { useDemand, useDriverFeed, useDriverRide } from '@/lib/pryamo/socket'
 import { rub, num, plural } from '@/lib/pryamo/format'
-import type { OrderDTO, RideDTO } from '@/lib/pryamo/types'
+import type { OrderDTO, RideDTO, WeekDay } from '@/lib/pryamo/types'
 
 function timeLeft(expiresAt: string): number {
   return Math.max(0, Math.round((+new Date(expiresAt) - Date.now()) / 1000))
@@ -46,7 +57,7 @@ export function DriverDemo() {
 
   const { zones, stats } = useDemand()
 
-  const { accept, decline, earnings, lastRides } = useDriverRide({
+  const { accept, decline, earnings, week, lastRides } = useDriverRide({
     onRideState: (r) => setDriverRide(r),
     onCompleted: (r) => {
       setDriverRide(r)
@@ -83,9 +94,9 @@ export function DriverDemo() {
   )
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
       {/* Левая колонка: лента заказов + активная поездка */}
-      <div className="flex flex-col gap-4">
+      <div className="flex min-w-0 flex-col gap-4">
         {/* Статус подключения */}
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/70 px-5 py-3.5 backdrop-blur">
           <div className="flex items-center gap-2">
@@ -185,7 +196,7 @@ export function DriverDemo() {
       </div>
 
       {/* Правая колонка: доход + спрос + платформа */}
-      <div className="flex flex-col gap-4">
+      <div className="flex min-w-0 flex-col gap-4">
         {/* Доход за смену */}
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5 backdrop-blur">
           <h3 className="flex items-center gap-2 text-lg font-bold text-white">
@@ -252,6 +263,8 @@ export function DriverDemo() {
                   +{rub(Math.round(earnings.gross * 0.4 - earnings.commission))} в вашу пользу.
                 </span>
               </div>
+
+              {week.length > 0 && <WeekChart week={week} />}
             </>
           ) : (
             <p className="mt-3 text-sm text-zinc-500">Загружаем данные смены…</p>
@@ -268,7 +281,10 @@ export function DriverDemo() {
           {zones.length > 0 && (
             <div className="mt-3 space-y-2">
               {zones.map((z) => (
-                <div key={z.id} className="flex items-center gap-3 text-xs">
+                <div
+                  key={z.id}
+                  className="flex items-center gap-3 rounded-lg px-1.5 py-1 text-xs transition-colors hover:bg-zinc-800/50"
+                >
                   <span className="w-16 shrink-0 font-semibold text-zinc-300">{z.name}</span>
                   <div className="h-2 flex-1 overflow-hidden rounded-full bg-zinc-800">
                     <div
@@ -351,6 +367,7 @@ function OrderCard({
     Math.round((+new Date(order.expiresAt) - +new Date(order.createdAt)) / 1000)
   )
   const leftPct = Math.min(100, Math.round((left / total) * 100))
+  const watching = order.watchingDrivers ?? 0
 
   return (
     <motion.article
@@ -359,22 +376,38 @@ function OrderCard({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.18 } }}
       transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-      className="order-flash group rounded-xl border border-zinc-700/80 bg-zinc-950/60 p-4 transition-colors hover:border-emerald-500/40"
+      className="order-flash group rounded-xl border border-zinc-700/80 bg-zinc-950/60 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/10"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
             <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-300">{order.tariff.name}</span>
             {order.surge > 1.05 && (
               <span className="rounded bg-amber-400/15 px-1.5 py-0.5 text-amber-300">
                 спрос ×{order.surge.toFixed(1)}
               </span>
             )}
-            <span>{order.distanceKm} км · {order.durationMin} мин</span>
+            <span
+              className={cn(
+                'inline-flex items-center gap-1 rounded px-1.5 py-0.5',
+                watching >= 15
+                  ? 'bg-rose-500/15 text-rose-300'
+                  : watching >= 8
+                    ? 'bg-amber-400/15 text-amber-300'
+                    : 'bg-emerald-500/15 text-emerald-300',
+              )}
+            >
+              <Eye className="h-3 w-3" aria-hidden="true" />
+              {watching > 0 &&
+                `${watching} ${plural(watching, 'водитель видит', 'водителя видят', 'водителей видят')}`}
+            </span>
           </div>
           <p className="mt-1.5 flex items-center gap-1 truncate text-sm font-semibold text-zinc-200">
             <MapPin className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
             {order.from.label}
+            <span className="ml-1 shrink-0 text-[11px] font-medium normal-case text-zinc-600">
+              {order.distanceKm} км · {order.durationMin} мин
+            </span>
           </p>
           <p className="flex items-center gap-1 truncate text-sm text-zinc-400">
             <MapPin className="h-3.5 w-3.5 shrink-0 text-amber-400" />
@@ -439,10 +472,115 @@ function StatTile({
   accent: string
 }) {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3.5">
+    <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3.5 transition-colors hover:border-emerald-500/30 hover:bg-zinc-900">
       <Icon className="h-4 w-4 text-emerald-400" />
       <p className={cn('mt-1.5 text-xl font-black tabular-nums', accent)}>{value}</p>
       <p className="text-[10px] uppercase tracking-wide text-zinc-500">{label}</p>
+    </div>
+  )
+}
+
+/** График «доход за неделю»: ПРЯМО против гипотезы «у монополиста» (−40%) */
+function WeekChart({ week }: { week: WeekDay[] }) {
+  const data = week.map((d) => ({
+    day: d.isToday ? 'Сегодня' : d.day,
+    pryamo: d.payout,
+    yandex: d.yandexPayout,
+    isToday: d.isToday,
+  }))
+  const weekGain = week.reduce((s, d) => s + (d.payout - d.yandexPayout), 0)
+  const today = data.findIndex((d) => d.isToday)
+
+  return (
+    <div className="mt-4 rounded-xl border border-emerald-500/20 bg-zinc-950/50 p-3.5">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+          <Banknote className="h-3.5 w-3.5 text-emerald-400" />
+          Доход за неделю: ПРЯМО против монополиста
+        </p>
+        <span className="rounded bg-emerald-500/15 px-2 py-0.5 text-[11px] font-black tabular-nums text-emerald-300">
+          +{rub(weekGain)} за неделю
+        </span>
+      </div>
+      <div className="h-40">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ top: 6, right: 6, left: -14, bottom: 0 }}>
+            <defs>
+              <linearGradient id="wkPryamo" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#10b981" stopOpacity={0.45} />
+                <stop offset="100%" stopColor="#10b981" stopOpacity={0.02} />
+              </linearGradient>
+              <linearGradient id="wkYandex" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#f43f5e" stopOpacity={0.25} />
+                <stop offset="100%" stopColor="#f43f5e" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid stroke="#27272a" strokeDasharray="3 3" vertical={false} />
+            <XAxis
+              dataKey="day"
+              tick={{ fill: '#71717a', fontSize: 10 }}
+              axisLine={{ stroke: '#3f3f46' }}
+              tickLine={false}
+              interval={0}
+            />
+            <YAxis
+              tick={{ fill: '#71717a', fontSize: 10 }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(v: number) => `${Math.round(v / 1000)}к`}
+            />
+            <Tooltip
+              cursor={{ stroke: '#52525b', strokeDasharray: '4 4' }}
+              contentStyle={{
+                background: '#18181b',
+                border: '1px solid #3f3f46',
+                borderRadius: '12px',
+                fontSize: '12px',
+                color: '#e4e4e7',
+              }}
+              formatter={(value: number | string | Array<number | string>, name: string) => {
+                const label = name === 'pryamo' ? 'ПРЯМО (8%)' : 'Монополист (−40%)'
+                return [rub(Number(value)), label]
+              }}
+              labelFormatter={() => ''}
+            />
+            <Area
+              type="monotone"
+              dataKey="yandex"
+              stroke="#f43f5e"
+              strokeWidth={1.5}
+              fill="url(#wkYandex)"
+              name="yandex"
+              dot={false}
+              activeDot={{ r: 3, fill: '#f43f5e' }}
+            />
+            <Area
+              type="monotone"
+              dataKey="pryamo"
+              stroke="#10b981"
+              strokeWidth={2}
+              fill="url(#wkPryamo)"
+              name="pryamo"
+              dot={false}
+              activeDot={{ r: 3, fill: '#10b981' }}
+            />
+            {today >= 0 && (
+              <ReferenceDot
+                x={data[today].day}
+                y={data[today].pryamo}
+                r={4}
+                fill="#10b981"
+                stroke="#064e3b"
+                strokeWidth={2}
+              />
+            )}
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+      <p className="mt-2 text-[10px] leading-relaxed text-zinc-500">
+        Красная линия — что забрал бы агрегатор-монополист с того же оборота. Зелёная — ваши деньги
+        на ПРЯМО. Разрыв каждую неделю — в вашем кармане.
+      </p>
     </div>
   )
 }

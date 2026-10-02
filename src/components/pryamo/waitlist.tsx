@@ -22,6 +22,21 @@ import { num, plural } from '@/lib/pryamo/format'
 
 const BASE_TARGET = 1000
 
+/** Маска телефона: любые вводимые цифры -> +7 XXX XXX-XX-XX */
+function formatPhone(raw: string): string {
+  let digits = raw.replace(/\D/g, '')
+  if (digits.startsWith('8')) digits = '7' + digits.slice(1)
+  if (digits.length > 0 && !digits.startsWith('7')) digits = '7' + digits
+  digits = digits.slice(0, 11)
+  const p = digits.slice(1)
+  let out = '+7'
+  if (p.length > 0) out += ` ${p.slice(0, 3)}`
+  if (p.length > 3) out += ` ${p.slice(3, 6)}`
+  if (p.length > 6) out += `-${p.slice(6, 8)}`
+  if (p.length > 8) out += `-${p.slice(8, 10)}`
+  return out
+}
+
 const PERKS = [
   {
     icon: BadgeCheck,
@@ -262,12 +277,14 @@ export function Waitlist() {
                     <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
                     <Input
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      onChange={(e) => setPhone(formatPhone(e.target.value))}
                       placeholder="+7 XXX XXX-XX-XX"
                       type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
                       aria-label="Телефон"
                       className="border-zinc-700 bg-zinc-950/60 pl-9 text-white placeholder:text-zinc-500"
-                      maxLength={20}
+                      maxLength={18}
                     />
                   </div>
                   <div className="relative">

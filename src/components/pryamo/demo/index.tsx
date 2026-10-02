@@ -36,17 +36,17 @@ export function DemoSection() {
         <div className="mt-10 flex justify-center">
           <Tabs value={tab} onValueChange={setTab} className="w-full">
             <div className="flex justify-center">
-              <TabsList className="h-13 rounded-2xl border border-zinc-800 bg-zinc-900 p-1.5">
+              <TabsList className="grid h-auto w-full max-w-sm grid-cols-1 gap-1.5 rounded-2xl border border-zinc-800 bg-zinc-900 p-1.5 sm:grid-cols-2">
                 <TabsTrigger
                   value="passenger"
-                  className="h-10 gap-2 rounded-xl px-5 text-sm font-bold data-[state=active]:bg-emerald-500 data-[state=active]:text-zinc-950 sm:px-8"
+                  className="h-10 w-full gap-2 rounded-xl px-4 text-xs font-bold text-zinc-400 data-[state=active]:bg-emerald-500 data-[state=active]:text-zinc-950 sm:px-8 sm:text-sm"
                 >
                   <User className="h-4 w-4" />
                   Я пассажир
                 </TabsTrigger>
                 <TabsTrigger
                   value="driver"
-                  className="h-10 gap-2 rounded-xl px-5 text-sm font-bold data-[state=active]:bg-amber-400 data-[state=active]:text-zinc-950 sm:px-8"
+                  className="h-10 w-full gap-2 rounded-xl px-4 text-xs font-bold text-zinc-400 data-[state=active]:bg-amber-400 data-[state=active]:text-zinc-950 sm:px-8 sm:text-sm"
                 >
                   <CarFront className="h-4 w-4" />
                   Я водитель
