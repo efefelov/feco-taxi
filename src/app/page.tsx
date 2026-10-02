@@ -5,12 +5,14 @@ import { Hero } from '@/components/pryamo/hero'
 import { MarketSection } from '@/components/pryamo/market'
 import { PainPoints } from '@/components/pryamo/pain-points'
 import { Comparison } from '@/components/pryamo/comparison'
+import { Testimonials } from '@/components/pryamo/testimonials'
 import { DemoSection } from '@/components/pryamo/demo'
 import { IncomeCalculator } from '@/components/pryamo/calculator'
 import { Monetization } from '@/components/pryamo/monetization'
 import { RatingSection } from '@/components/pryamo/rating'
 import { Roadmap } from '@/components/pryamo/roadmap'
 import { Faq } from '@/components/pryamo/faq'
+import { Waitlist } from '@/components/pryamo/waitlist'
 import { Footer } from '@/components/pryamo/footer'
 
 export default function Home() {
@@ -22,11 +24,13 @@ export default function Home() {
         <MarketSection />
         <PainPoints />
         <Comparison />
+        <Testimonials />
         <DemoSection />
         <IncomeCalculator />
         <Monetization />
         <RatingSection />
         <Roadmap />
+        <Waitlist />
         <Faq />
       </main>
       <Footer />

@@ -63,3 +63,14 @@ model MarketStat {
   source  String
   tone    String @default("danger") // danger | success | neutral
 }
+
+// Лист ожидания: водители и таксопарки (lead capture)
+model WaitlistEntry {
+  id        String   @id @default(cuid())
+  role      String   @default("driver") // driver | fleet | passenger
+  name      String
+  phone     String
+  city      String
+  comment   String?
+  createdAt DateTime @default(now())
+}

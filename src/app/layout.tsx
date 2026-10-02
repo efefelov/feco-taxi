@@ -26,6 +26,9 @@ export const metadata: Metadata = {
     "низкая комиссия такси",
   ],
   authors: [{ name: "ПРЯМО" }],
+  icons: {
+    icon: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23059669'/%3E%3Cpath d='M17.5 5 9 18h6l-1.5 9L22 14h-6l1.5-9z' fill='%2309090b'/%3E%3C/svg%3E",
+  },
   openGraph: {
     title: "ПРЯМО — такси без посредников",
     description:

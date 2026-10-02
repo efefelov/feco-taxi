@@ -213,3 +213,61 @@
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
+
+/* Маркиза отзывов: бесшовный цикл */
+@keyframes marqueeScroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.marquee-track {
+  animation: marqueeScroll 46s linear infinite;
+}
+.marquee-mask:hover .marquee-track {
+  animation-play-state: paused;
+}
+.marquee-mask::before,
+.marquee-mask::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 72px;
+  z-index: 10;
+  pointer-events: none;
+}
+.marquee-mask::before {
+  left: 0;
+  background: linear-gradient(to right, #ffffff, rgba(255, 255, 255, 0));
+}
+.marquee-mask::after {
+  right: 0;
+  background: linear-gradient(to left, #ffffff, rgba(255, 255, 255, 0));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track,
+  .radar-ring,
+  .zone-pulse {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* Вспышка нового заказа в ленте водителя */
+@keyframes orderFlash {
+  0% {
+    background-color: rgba(16, 185, 129, 0.14);
+    border-color: rgba(16, 185, 129, 0.55);
+  }
+  100% {
+    background-color: rgba(9, 9, 11, 0.6);
+    border-color: rgba(63, 63, 70, 0.8);
+  }
+}
+.order-flash {
+  animation: orderFlash 1.8s ease-out forwards;
+}

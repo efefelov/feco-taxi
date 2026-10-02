@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { toast } from '@/hooks/use-toast'
 import { CityMap } from './city-map'
+import { DemandForecast } from './demand-forecast'
 import { useDemand, useDriverFeed, useDriverRide } from '@/lib/pryamo/socket'
 import { rub, num, plural } from '@/lib/pryamo/format'
 import type { OrderDTO, RideDTO } from '@/lib/pryamo/types'
@@ -288,7 +289,7 @@ export function DriverDemo() {
                 <div className="mt-3 flex items-start gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/8 p-3 text-xs text-emerald-200">
                   <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
                   <span>
-                    Совет часа: зона <strong>{bestZone.name}</strong> — спрос {bestZone.demand}%,{' '}
+                    Совет зоны: <strong>{bestZone.name}</strong> — спрос {bestZone.demand}%,{' '}
                     {bestZone.waitingDrivers} {plural(bestZone.waitingDrivers, 'водитель', 'водителя', 'водителей')}{' '}
                     в очереди. Если x{bestZone.surge.toFixed(1)} — ваша доля вырастет вместе с коэффициентом.
                   </span>
@@ -297,6 +298,9 @@ export function DriverDemo() {
             </div>
           )}
         </div>
+
+        {/* Прогноз спроса по часам */}
+        <DemandForecast zones={zones} />
 
         {/* Статистика платформы */}
         {stats && (
@@ -355,7 +359,7 @@ function OrderCard({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.18 } }}
       transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-      className="group rounded-xl border border-zinc-700/80 bg-zinc-950/60 p-4 transition-colors hover:border-emerald-500/40"
+      className="order-flash group rounded-xl border border-zinc-700/80 bg-zinc-950/60 p-4 transition-colors hover:border-emerald-500/40"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">

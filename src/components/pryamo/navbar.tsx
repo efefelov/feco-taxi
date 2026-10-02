@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Zap, Menu, X, ArrowRight, Radio } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -13,17 +13,47 @@ const NAV = [
   { href: '#calc', label: 'Калькулятор' },
   { href: '#money', label: 'Монетизация' },
   { href: '#roadmap', label: 'План' },
+  { href: '#join', label: 'Первая волна' },
 ]
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
+  const [active, setActive] = useState<string>('')
+  const activeRef = useRef('')
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24)
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Scroll-spy: подсветка активной секции
+  useEffect(() => {
+    const ids = NAV.map((n) => n.href.slice(1))
+    const sections = ids
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => el !== null)
+    if (!sections.length) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            if (activeRef.current !== e.target.id) {
+              activeRef.current = e.target.id
+              setActive(e.target.id)
+            }
+          }
+        }
+      },
+      // Полоса на 35–45% высоты экрана: активна секция, пересекающая её.
+      // Работает для любых высот секций (демо — более 2000px).
+      { rootMargin: '-35% 0px -55% 0px', threshold: 0 }
+    )
+    sections.forEach((s) => observer.observe(s))
+    return () => observer.disconnect()
   }, [])
 
   return (
@@ -50,15 +80,30 @@ export function Navbar() {
           </a>
 
           <nav className="hidden items-center gap-1 lg:flex" aria-label="Основная навигация">
-            {NAV.map((n) => (
-              <a
-                key={n.href}
-                href={n.href}
-                className="rounded-lg px-3.5 py-2 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-800/60 hover:text-white"
-              >
-                {n.label}
-              </a>
-            ))}
+            {NAV.map((n) => {
+              const isActive = active === n.href.slice(1)
+              return (
+                <a
+                  key={n.href}
+                  href={n.href}
+                  className={cn(
+                    'relative rounded-lg px-3.5 py-2 text-sm font-medium transition-colors',
+                    isActive
+                      ? 'text-emerald-300'
+                      : 'text-zinc-300 hover:bg-zinc-800/60 hover:text-white'
+                  )}
+                >
+                  {n.label}
+                  {isActive && (
+                    <motion.span
+                      layoutId="nav-underline"
+                      className="absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full bg-emerald-400"
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                </a>
+              )
+            })}
           </nav>
 
           <div className="hidden items-center gap-3 lg:flex">
@@ -70,8 +115,8 @@ export function Navbar() {
               asChild
               className="bg-emerald-500 text-zinc-950 font-bold hover:bg-emerald-400 shadow-lg shadow-emerald-500/25"
             >
-              <a href="#demo">
-                Хочу зарабатывать
+              <a href="#join">
+                Стать основателем
                 <ArrowRight className="ml-1 h-4 w-4" />
               </a>
             </Button>
@@ -110,11 +155,11 @@ export function Navbar() {
                 </a>
               ))}
               <a
-                href="#demo"
+                href="#join"
                 onClick={() => setOpen(false)}
                 className="mt-2 flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-base font-bold text-zinc-950"
               >
-                Хочу зарабатывать
+                Стать основателем
                 <ArrowRight className="h-4 w-4" />
               </a>
             </div>
