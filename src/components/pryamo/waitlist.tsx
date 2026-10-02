@@ -72,6 +72,13 @@ export function Waitlist() {
       .catch(() => setCount(0))
   }, [])
 
+  // Из секции «Таксопаркам» пришли за формой — предвыбираем роль парка
+  useEffect(() => {
+    const onRolePick = () => setRole('fleet')
+    window.addEventListener('pryamo:role-pick', onRolePick)
+    return () => window.removeEventListener('pryamo:role-pick', onRolePick)
+  }, [])
+
   const filled = useMemo(
     () => Math.min(100, Math.round(((count ?? 0) / BASE_TARGET) * 100)),
     [count]

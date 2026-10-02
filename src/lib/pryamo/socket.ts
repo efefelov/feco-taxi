@@ -18,10 +18,15 @@ import type {
  * Лёгкий статус демо-движка для навигации и hero:
  * одно соединение без входа в комнаты — движок рассылает stats:live всем.
  * Переподключается бесконечно, чтобы статус всегда был честным.
+ *
+ * fresh: сокет жив, но stats:live не приходят дольше 18 с (движок шлёт их
+ * каждые 5 с) — значит процесс движка «застрял», и мы показываем это честно.
  */
 export function useEngineStatus() {
   const [connected, setConnected] = useState(false)
   const [stats, setStats] = useState<LiveStats | null>(null)
+  const [fresh, setFresh] = useState(true)
+  const lastStatsRef = useRef(0)
 
   useEffect(() => {
     const s = io('/?XTransformPort=3003', {
@@ -31,16 +36,28 @@ export function useEngineStatus() {
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1500,
     })
-    s.on('connect', () => setConnected(true))
+    s.on('connect', () => {
+      setConnected(true)
+      lastStatsRef.current = Date.now()
+      setFresh(true)
+    })
     s.on('disconnect', () => setConnected(false))
     s.on('connect_error', () => setConnected(false))
-    s.on('stats:live', (d: LiveStats) => setStats(d))
+    s.on('stats:live', (d: LiveStats) => {
+      setStats(d)
+      lastStatsRef.current = Date.now()
+      setFresh(true)
+    })
+    const iv = setInterval(() => {
+      setFresh(Date.now() - lastStatsRef.current < 18_000)
+    }, 3000)
     return () => {
+      clearInterval(iv)
       s.disconnect()
     }
   }, [])
 
-  return { connected, stats }
+  return { connected, stats, fresh }
 }
 
 /** Запись в журнале ленты: судьба заказа после исчезновения из общего фида */

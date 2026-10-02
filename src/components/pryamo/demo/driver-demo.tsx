@@ -21,12 +21,14 @@ import {
   History,
   MousePointerClick,
   Clock,
+  ReceiptText,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { toast } from '@/hooks/use-toast'
 import { CityMap } from './city-map'
 import { DemandForecast } from './demand-forecast'
+import { ShiftReport } from './shift-report'
 import { useDemand, useDriverFeed, useDriverRide } from '@/lib/pryamo/socket'
 import type { FeedHistoryEntry } from '@/lib/pryamo/socket'
 import { rub, num, plural } from '@/lib/pryamo/format'
@@ -91,6 +93,13 @@ export function DriverDemo() {
   const handleDecline = (id: string) => {
     markSkipped(id)
     decline(id)
+  }
+
+  // Отчёт по смене: модалка со сводкой
+  const [reportOpen, setReportOpen] = useState(false)
+  const openReportAndJoin = () => {
+    setReportOpen(false)
+    document.querySelector('#join')?.scrollIntoView({ behavior: 'smooth' })
   }
 
   // Тикер времени истечения заказов
@@ -219,10 +228,22 @@ export function DriverDemo() {
       <div className="flex min-w-0 flex-col gap-4">
         {/* Доход за смену */}
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-5 backdrop-blur">
-          <h3 className="flex items-center gap-2 text-lg font-bold text-white">
-            <Banknote className="h-5 w-5 text-emerald-400" />
-            Смена сегодня
-          </h3>
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="flex items-center gap-2 text-lg font-bold text-white">
+              <Banknote className="h-5 w-5 text-emerald-400" />
+              Смена сегодня
+            </h3>
+            <Button
+              onClick={() => setReportOpen(true)}
+              disabled={!earnings}
+              size="sm"
+              variant="outline"
+              className="h-8 border-emerald-500/40 bg-emerald-500/10 px-3 text-xs font-bold text-emerald-300 hover:bg-emerald-500/20 hover:text-emerald-200"
+            >
+              <ReceiptText className="mr-1.5 h-3.5 w-3.5" />
+              Отчёт
+            </Button>
+          </div>
           {earnings ? (
             <>
               <div className="mt-3 flex items-baseline justify-between">
@@ -337,6 +358,18 @@ export function DriverDemo() {
 
         {/* Прогноз спроса по часам */}
         <DemandForecast zones={zones} />
+
+        {/* Отчёт по смене */}
+        {earnings && (
+          <ShiftReport
+            open={reportOpen}
+            onOpenChange={setReportOpen}
+            earnings={earnings}
+            lastRides={lastRides}
+            history={history}
+            onJoin={openReportAndJoin}
+          />
+        )}
 
         {/* Статистика платформы */}
         {stats && (

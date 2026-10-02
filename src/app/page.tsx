@@ -12,12 +12,14 @@ import { DemoSection } from '@/components/pryamo/demo'
 import { AuctionSection } from '@/components/pryamo/auction'
 import { IncomeCalculator } from '@/components/pryamo/calculator'
 import { Monetization } from '@/components/pryamo/monetization'
+import { Fleets } from '@/components/pryamo/fleets'
 import { RatingSection } from '@/components/pryamo/rating'
 import { Roadmap } from '@/components/pryamo/roadmap'
 import { Faq } from '@/components/pryamo/faq'
 import { Waitlist } from '@/components/pryamo/waitlist'
 import { Footer } from '@/components/pryamo/footer'
 import { OnboardingWizard } from '@/components/pryamo/onboarding'
+import { ScrollProgress } from '@/components/pryamo/scroll-progress'
 
 export default function Home() {
   return (
@@ -35,6 +37,7 @@ export default function Home() {
         <AuctionSection />
         <IncomeCalculator />
         <Monetization />
+        <Fleets />
         <RatingSection />
         <Roadmap />
         <Waitlist />
@@ -42,6 +45,7 @@ export default function Home() {
       </main>
       <Footer />
       <OnboardingWizard />
+      <ScrollProgress />
     </div>
   )
 }

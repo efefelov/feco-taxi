@@ -23,7 +23,14 @@ export function Navbar() {
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState<string>('')
   const activeRef = useRef('')
-  const { connected } = useEngineStatus()
+  const { connected, fresh } = useEngineStatus()
+  // Три честных состояния: онлайн / сокет жив, но данных нет / переподключение
+  const engineOnline = connected && fresh
+  const engineLabel = engineOnline
+    ? 'движок демо: онлайн'
+    : connected
+      ? 'движок: нет данных'
+      : 'движок: переподключение…'
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24)
@@ -113,7 +120,7 @@ export function Navbar() {
             <span
               className={cn(
                 'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
-                connected
+                engineOnline
                   ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
                   : 'border-amber-400/30 bg-amber-400/10 text-amber-300'
               )}
@@ -124,17 +131,17 @@ export function Navbar() {
                 <span
                   className={cn(
                     'absolute inline-flex h-full w-full rounded-full opacity-60',
-                    connected ? 'animate-ping bg-emerald-400' : 'animate-pulse bg-amber-400'
+                    engineOnline ? 'animate-ping bg-emerald-400' : 'animate-pulse bg-amber-400'
                   )}
                 />
                 <span
                   className={cn(
                     'relative inline-flex h-1.5 w-1.5 rounded-full',
-                    connected ? 'bg-emerald-400' : 'bg-amber-400'
+                    engineOnline ? 'bg-emerald-400' : 'bg-amber-400'
                   )}
                 />
               </span>
-              {connected ? 'движок демо: онлайн' : 'движок: переподключение…'}
+              {engineLabel}
             </span>
             <Button
               asChild
@@ -172,15 +179,15 @@ export function Navbar() {
               <span
                 className={cn(
                   'mb-2 flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium',
-                  connected ? 'text-emerald-300' : 'text-amber-300'
+                  engineOnline ? 'text-emerald-300' : 'text-amber-300'
                 )}
                 role="status"
                 aria-live="polite"
               >
                 <Radio
-                  className={cn('h-3.5 w-3.5', connected ? 'animate-pulse text-emerald-400' : 'text-amber-400')}
+                  className={cn('h-3.5 w-3.5', engineOnline ? 'animate-pulse text-emerald-400' : 'text-amber-400')}
                 />
-                {connected ? 'движок демо: онлайн' : 'движок: переподключение…'}
+                {engineLabel}
               </span>
               {NAV.map((n) => (
                 <a
