@@ -1,6 +1,6 @@
 'use client'
 
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { Banknote, Coins, Split, UserRound, TrendingDown } from 'lucide-react'
 
 /**
@@ -51,8 +51,33 @@ const FLOWS: FlowSpec[] = [
 const DRIVER_PATH = 'M 60 78 C 60 150, 30 190, 30 268'
 const PLATFORM_PATH = 'M 120 78 C 120 150, 200 190, 200 268'
 
+/** Контрольные точки кубических безье — для статичных частиц при reduced motion */
+const DRIVER_CURVE: [number, number][] = [
+  [60, 78], [60, 150], [30, 190], [30, 268],
+]
+const PLATFORM_CURVE: [number, number][] = [
+  [120, 78], [120, 150], [200, 190], [200, 268],
+]
+
+/** Точка на кубическом безье в момент t (0..1) — чистая математика, SSR-безопасно */
+function bezierAt(c: [number, number][], t: number): { x: number; y: number } {
+  const mt = 1 - t
+  const w0 = mt * mt * mt
+  const w1 = 3 * mt * mt * t
+  const w2 = 3 * mt * t * t
+  const w3 = t * t * t
+  return {
+    x: w0 * c[0][0] + w1 * c[1][0] + w2 * c[2][0] + w3 * c[3][0],
+    y: w0 * c[0][1] + w1 * c[1][1] + w2 * c[2][1] + w3 * c[3][1],
+  }
+}
+
+/** Позиции статичных точек на кривой при reduced motion */
+const STATIC_T = [0.18, 0.42, 0.66, 0.88]
+
 function FlowPanel({ spec, index }: { spec: FlowSpec; index: number }) {
   const isPryamo = spec.id === 'pryamo'
+  const reduced = useReducedMotion()
   const accentDriver = isPryamo ? '#34d399' : '#fb7185'
   const accentPlatform = isPryamo ? '#34d399' : '#f43f5e'
   // Толщина линии пропорциональна доле денег
@@ -119,18 +144,32 @@ function FlowPanel({ spec, index }: { spec: FlowSpec; index: number }) {
         <path d={PLATFORM_PATH} fill="none" stroke={accentPlatform} strokeWidth={platformW}
           strokeLinecap="round" opacity="0.28" />
 
-        {/* Частицы к водителю */}
-        {Array.from({ length: driverDots }).map((_, i) => (
-          <circle key={`d${i}`} r={Math.max(2.5, driverW / 2.6)} fill={accentDriver}>
-            <animateMotion dur="2.6s" begin={`${(i / driverDots) * 2.6}s`} repeatCount="indefinite" path={DRIVER_PATH} />
-          </circle>
-        ))}
+        {/* Частицы к водителю: живые (SMIL) или статичные точки при reduced motion */}
+        {reduced
+          ? STATIC_T.map((t) => {
+              const p = bezierAt(DRIVER_CURVE, t)
+              return (
+                <circle key={`ds${t}`} cx={p.x} cy={p.y} r={Math.max(2.5, driverW / 2.6)} fill={accentDriver} opacity={0.9} />
+              )
+            })
+          : Array.from({ length: driverDots }).map((_, i) => (
+              <circle key={`d${i}`} r={Math.max(2.5, driverW / 2.6)} fill={accentDriver}>
+                <animateMotion dur="2.6s" begin={`${(i / driverDots) * 2.6}s`} repeatCount="indefinite" path={DRIVER_PATH} />
+              </circle>
+            ))}
         {/* Частицы к платформе */}
-        {Array.from({ length: platformDots }).map((_, i) => (
-          <circle key={`p${i}`} r={Math.max(2.5, platformW / 2.6)} fill={accentPlatform}>
-            <animateMotion dur="2.2s" begin={`${(i / platformDots) * 2.2 + 0.4}s`} repeatCount="indefinite" path={PLATFORM_PATH} />
-          </circle>
-        ))}
+        {reduced
+          ? STATIC_T.map((t) => {
+              const p = bezierAt(PLATFORM_CURVE, t)
+              return (
+                <circle key={`ps${t}`} cx={p.x} cy={p.y} r={Math.max(2.5, platformW / 2.6)} fill={accentPlatform} opacity={0.9} />
+              )
+            })
+          : Array.from({ length: platformDots }).map((_, i) => (
+              <circle key={`p${i}`} r={Math.max(2.5, platformW / 2.6)} fill={accentPlatform}>
+                <animateMotion dur="2.2s" begin={`${(i / platformDots) * 2.2 + 0.4}s`} repeatCount="indefinite" path={PLATFORM_PATH} />
+              </circle>
+            ))}
 
         {/* Узел водителя */}
         <g>

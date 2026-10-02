@@ -10,6 +10,9 @@ import {
   Banknote,
   Route,
   Crown,
+  Share2,
+  Check,
+  RotateCcw,
 } from 'lucide-react'
 import { Slider } from '@/components/ui/slider'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -49,11 +52,63 @@ const SLIDERS: SliderDef[] = [
 
 const DEFAULTS = { hoursPerDay: 10, daysPerMonth: 24, avgCheck: 450, ridesPerHour: 1.8 }
 
+/** Копирование в буфер с fallback для старых контекстов */
+async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch {
+    try {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      const ok = document.execCommand('copy')
+      document.body.removeChild(ta)
+      return ok
+    } catch {
+      return false
+    }
+  }
+}
+
 export function IncomeCalculator() {
   const [values, setValues] = useState(DEFAULTS)
   const [result, setResult] = useState<CalculatorResult | null>(null)
   const [loading, setLoading] = useState(false)
+  const [shared, setShared] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
+  const sharedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Восстановление настроек из ссылки «поделиться расчётом»: ?h=10&d=24&c=450&r=1.8#calc
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search)
+    const num = (v: string | null): number | null => {
+      const n = Number(v)
+      return v !== null && Number.isFinite(n) ? n : null
+    }
+    const clamp = (n: number | null, min: number, max: number) =>
+      n !== null && n >= min && n <= max ? n : null
+    const h = clamp(num(sp.get('h')), 4, 16)
+    const d = clamp(num(sp.get('d')), 5, 30)
+    const c = clamp(num(sp.get('c')), 200, 1500)
+    const r = clamp(num(sp.get('r')), 0.5, 3.5)
+    if (h === null && d === null && c === null && r === null) return
+    setValues((prev) => ({
+      hoursPerDay: h !== null ? Math.round(h) : prev.hoursPerDay,
+      daysPerMonth: d !== null ? Math.round(d) : prev.daysPerMonth,
+      avgCheck: c !== null ? Math.round(c / 25) * 25 : prev.avgCheck,
+      ridesPerHour: r !== null ? Math.round(r * 10) / 10 : prev.ridesPerHour,
+    }))
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (sharedTimerRef.current) clearTimeout(sharedTimerRef.current)
+    }
+  }, [])
 
   const recalc = useCallback(async (v: typeof DEFAULTS) => {
     abortRef.current?.abort()
@@ -88,6 +143,32 @@ export function IncomeCalculator() {
         { name: 'ПРЯМО Pro', value: result.pryamoPro.monthly, fill: '#059669' },
       ]
     : []
+
+  const onShare = useCallback(async () => {
+    const u = new URL(window.location.href)
+    u.search = `?h=${values.hoursPerDay}&d=${values.daysPerMonth}&c=${values.avgCheck}&r=${values.ridesPerHour}`
+    u.hash = '#calc'
+    const url = u.toString()
+    const text = result
+      ? `Мой расчёт: ${values.hoursPerDay} ч × ${values.daysPerMonth} дн, чек ${values.avgCheck} ₽ — на ПРЯМО Pro ${rub(result.pryamoPro.monthly)} против ${rub(result.yandex.monthly)} у монополии (+${rub(result.diffMonthly)} в месяц). Посчитай свой:`
+      : 'Посчитай, сколько ты теряешь на комиссии такси:'
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title: 'ПРЯМО — калькулятор дохода водителя', text, url })
+      } catch {
+        /* пользователь отменил шторку — ничего не делаем */
+      }
+    } else {
+      await copyText(url)
+    }
+    setShared(true)
+    if (sharedTimerRef.current) clearTimeout(sharedTimerRef.current)
+    sharedTimerRef.current = setTimeout(() => setShared(false), 2600)
+  }, [values, result])
+
+  const onReset = useCallback(() => {
+    setValues(DEFAULTS)
+  }, [])
 
   return (
     <section id="calc" className="scroll-mt-20 bg-zinc-950 py-20 text-zinc-100 lg:py-24">
@@ -222,22 +303,57 @@ export function IncomeCalculator() {
             </div>
 
             {result && (
-              <div className="flex flex-col items-center justify-between gap-4 rounded-2xl border border-rose-500/25 bg-gradient-to-r from-rose-500/10 to-transparent p-5 sm:flex-row">
-                <div>
-                  <p className="text-sm text-zinc-400">
-                    За год монополия заберёт у вас (при тех же настройках):
-                  </p>
-                  <p className="text-2xl font-black tabular-nums text-rose-400">
-                    {rub(result.yandex.lostYearly)}
-                  </p>
+              <>
+                <div className="flex flex-col items-center justify-between gap-4 rounded-2xl border border-rose-500/25 bg-gradient-to-r from-rose-500/10 to-transparent p-5 sm:flex-row">
+                  <div>
+                    <p className="text-sm text-zinc-400">
+                      За год монополия заберёт у вас (при тех же настройках):
+                    </p>
+                    <p className="text-2xl font-black tabular-nums text-rose-400">
+                      {rub(result.yandex.lostYearly)}
+                    </p>
+                  </div>
+                  <div className="text-center sm:text-right">
+                    <p className="text-sm text-zinc-400">Годовая разница с ПРЯМО Pro:</p>
+                    <p className="text-2xl font-black tabular-nums text-emerald-400">
+                      {rub(result.diffYearly, { sign: true })}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-center sm:text-right">
-                  <p className="text-sm text-zinc-400">Годовая разница с ПРЯМО Pro:</p>
-                  <p className="text-2xl font-black tabular-nums text-emerald-400">
-                    {rub(result.diffYearly, { sign: true })}
-                  </p>
+
+                {/* Виральность: поделиться расчётом + сброс */}
+                <div className="flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    onClick={onShare}
+                    className={cn(
+                      'inline-flex h-11 items-center gap-2 rounded-xl border px-5 text-sm font-bold transition-all active:scale-[0.98]',
+                      shared
+                        ? 'border-emerald-400 bg-emerald-500/15 text-emerald-300'
+                        : 'border-amber-400/40 bg-amber-400/10 text-amber-300 hover:border-amber-300 hover:bg-amber-400/20'
+                    )}
+                    aria-live="polite"
+                  >
+                    {shared ? (
+                      <>
+                        <Check className="h-4 w-4" strokeWidth={2.6} />
+                        Ссылка скопирована
+                      </>
+                    ) : (
+                      <>
+                        <Share2 className="h-4 w-4" />
+                        Поделиться расчётом
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={onReset}
+                    className="inline-flex h-11 items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900/60 px-5 text-sm font-semibold text-zinc-400 transition-colors hover:border-zinc-600 hover:text-zinc-200 active:scale-[0.98]"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    Сбросить
+                  </button>
                 </div>
-              </div>
+              </>
             )}
           </motion.div>
         </div>

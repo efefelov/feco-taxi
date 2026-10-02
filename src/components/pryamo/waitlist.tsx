@@ -156,7 +156,7 @@ export function Waitlist() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-60px' }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="mx-auto mt-8 max-w-2xl"
+          className="mx-auto mt-6 max-w-2xl"
         >
           <div className="flex items-end justify-between text-sm">
             <span className="flex items-center gap-1.5 font-semibold text-zinc-300">
@@ -183,7 +183,7 @@ export function Waitlist() {
           </p>
         </motion.div>
 
-        <div className="mt-10 grid gap-6 lg:grid-cols-[1fr_minmax(0,460px)]">
+        <div className="mt-12 grid gap-6 lg:grid-cols-[1fr_minmax(0,460px)]">
           {/* Преимущества */}
           <motion.div
             initial={{ opacity: 0, x: -24 }}
@@ -270,7 +270,7 @@ export function Waitlist() {
                       onChange={(e) => setName(e.target.value)}
                       placeholder={role === 'driver' ? 'Имя' : 'Название парка'}
                       aria-label="Имя или название"
-                      className="border-zinc-700 bg-zinc-950/60 pl-9 text-white placeholder:text-zinc-500"
+                      className="border-zinc-700 bg-zinc-950/60 pl-9 text-white placeholder:text-zinc-400"
                       maxLength={80}
                     />
                   </div>
@@ -284,7 +284,7 @@ export function Waitlist() {
                       inputMode="tel"
                       autoComplete="tel"
                       aria-label="Телефон"
-                      className="border-zinc-700 bg-zinc-950/60 pl-9 text-white placeholder:text-zinc-500"
+                      className="border-zinc-700 bg-zinc-950/60 pl-9 text-white placeholder:text-zinc-400"
                       maxLength={18}
                     />
                   </div>
@@ -295,7 +295,7 @@ export function Waitlist() {
                       onChange={(e) => setCity(e.target.value)}
                       placeholder="Город"
                       aria-label="Город"
-                      className="border-zinc-700 bg-zinc-950/60 pl-9 text-white placeholder:text-zinc-500"
+                      className="border-zinc-700 bg-zinc-950/60 pl-9 text-white placeholder:text-zinc-400"
                       maxLength={60}
                     />
                   </div>

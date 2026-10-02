@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 const NAV = [
   { href: '#problem', label: 'Проблема' },
   { href: '#compare', label: 'Сравнение' },
+  { href: '#flow', label: 'Чек' },
   { href: '#demo', label: 'Живое демо' },
   { href: '#calc', label: 'Калькулятор' },
   { href: '#money', label: 'Монетизация' },
@@ -79,7 +80,7 @@ export function Navbar() {
             </span>
           </a>
 
-          <nav className="hidden items-center gap-1 lg:flex" aria-label="Основная навигация">
+          <nav className="hidden items-center gap-0.5 xl:flex" aria-label="Основная навигация">
             {NAV.map((n) => {
               const isActive = active === n.href.slice(1)
               return (
@@ -87,7 +88,7 @@ export function Navbar() {
                   key={n.href}
                   href={n.href}
                   className={cn(
-                    'relative rounded-lg px-3.5 py-2 text-sm font-medium transition-colors',
+                    'relative rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                     isActive
                       ? 'text-emerald-300'
                       : 'text-zinc-300 hover:bg-zinc-800/60 hover:text-white'
@@ -106,7 +107,7 @@ export function Navbar() {
             })}
           </nav>
 
-          <div className="hidden items-center gap-3 lg:flex">
+          <div className="hidden items-center gap-3 xl:flex">
             <span className="flex items-center gap-1.5 text-xs font-medium text-zinc-400">
               <Radio className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
               движок демо: онлайн
@@ -123,7 +124,7 @@ export function Navbar() {
           </div>
 
           <button
-            className="rounded-lg p-2 text-zinc-300 hover:bg-zinc-800 lg:hidden"
+            className="rounded-lg p-2 text-zinc-300 hover:bg-zinc-800 xl:hidden"
             onClick={() => setOpen((v) => !v)}
             aria-label={open ? 'Закрыть меню' : 'Открыть меню'}
             aria-expanded={open}
@@ -140,7 +141,7 @@ export function Navbar() {
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.22 }}
-            className="overflow-hidden border-b border-zinc-800 bg-zinc-950/95 backdrop-blur-xl lg:hidden"
+            className="overflow-hidden border-b border-zinc-800 bg-zinc-950/95 backdrop-blur-xl xl:hidden"
             aria-label="Мобильная навигация"
           >
             <div className="space-y-1 px-4 py-4">
