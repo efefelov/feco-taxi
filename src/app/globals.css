@@ -197,6 +197,25 @@
   background: #52525b;
 }
 
+/* Кастомный скроллбар для таблицы сравнения (светлая секция) */
+.table-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #d4d4d8 transparent;
+}
+.table-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.table-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.table-scroll::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+  border-radius: 999px;
+}
+.table-scroll::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
+}
+
 /* Плавное появление сниппетов для тостов */
 @keyframes toastIn {
   from {
@@ -255,6 +274,14 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+}
+
+/* Обрезаем горизонтальное переполнение на уровне html:
+   framer-motion initial x:±24 у карточек до срабатывания whileInView
+   кратковременно раздувает scrollWidth на мобильных. clip НЕ создаёт
+   scroll-контейнер, поэтому sticky navbar продолжает работать. */
+html {
+  overflow-x: clip;
 }
 
 /* Вспышка нового заказа в ленте водителя */

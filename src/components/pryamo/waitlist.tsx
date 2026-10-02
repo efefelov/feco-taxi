@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { toast } from '@/hooks/use-toast'
 import { num, plural } from '@/lib/pryamo/format'
+import { OnboardingTrigger } from '@/components/pryamo/onboarding'
 
 const BASE_TARGET = 1000
 
@@ -307,6 +308,9 @@ export function Waitlist() {
                 >
                   {loading ? 'Отправляем…' : 'Занять место в первой волне'}
                 </Button>
+                <div className="mt-3">
+                  <OnboardingTrigger variant="form" />
+                </div>
                 <p className="mt-3 text-center text-[11px] leading-relaxed text-zinc-600">
                   Демо-версия: данные сохраняются локально в базе концепта, никуда не передаются.
                 </p>

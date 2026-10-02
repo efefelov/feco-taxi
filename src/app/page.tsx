@@ -5,6 +5,7 @@ import { Hero } from '@/components/pryamo/hero'
 import { MarketSection } from '@/components/pryamo/market'
 import { PainPoints } from '@/components/pryamo/pain-points'
 import { Comparison } from '@/components/pryamo/comparison'
+import { MoneyFlow } from '@/components/pryamo/money-flow'
 import { Testimonials } from '@/components/pryamo/testimonials'
 import { DemoSection } from '@/components/pryamo/demo'
 import { IncomeCalculator } from '@/components/pryamo/calculator'
@@ -14,6 +15,7 @@ import { Roadmap } from '@/components/pryamo/roadmap'
 import { Faq } from '@/components/pryamo/faq'
 import { Waitlist } from '@/components/pryamo/waitlist'
 import { Footer } from '@/components/pryamo/footer'
+import { OnboardingWizard } from '@/components/pryamo/onboarding'
 
 export default function Home() {
   return (
@@ -24,6 +26,7 @@ export default function Home() {
         <MarketSection />
         <PainPoints />
         <Comparison />
+        <MoneyFlow />
         <Testimonials />
         <DemoSection />
         <IncomeCalculator />
@@ -34,6 +37,7 @@ export default function Home() {
         <Faq />
       </main>
       <Footer />
+      <OnboardingWizard />
     </div>
   )
 }

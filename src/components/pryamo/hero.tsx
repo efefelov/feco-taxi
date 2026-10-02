@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { motion, useInView } from 'framer-motion'
-import { ArrowDown, BadgePercent, ShieldCheck, Timer, ReceiptText, TrendingDown } from 'lucide-react'
+import { ArrowDown, BadgePercent, ShieldCheck, Timer, ReceiptText, TrendingDown, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { rub } from '@/lib/pryamo/format'
+import { rub, plural } from '@/lib/pryamo/format'
+import { OnboardingTrigger } from '@/components/pryamo/onboarding'
 
 // Оценка переплат водителями агрегаторам за день:
 // ~9,3 млн поездок/день × 450 ₽ средний чек × ~40% совокупных потерь ≈ 1,68 млрд ₽/день
@@ -132,6 +133,15 @@ function ReceiptCard({
 
 export function Hero() {
   const { value, ref } = useOverpayCounter()
+  const [waveCount, setWaveCount] = useState<number | null>(null)
+
+  // Живой счётчик первой волны (соцдоказательство)
+  useEffect(() => {
+    fetch('/api/waitlist')
+      .then((r) => r.json())
+      .then((d) => setWaveCount(typeof d.count === 'number' ? d.count : null))
+      .catch(() => setWaveCount(null))
+  }, [])
 
   return (
     <section id="top" className="relative overflow-hidden bg-zinc-950 pb-20 pt-32 sm:pt-36 lg:pb-28">
@@ -214,6 +224,25 @@ export function Hero() {
               </Button>
             </motion.div>
 
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="mt-4"
+            >
+              <OnboardingTrigger variant="hero" />
+              {waveCount !== null && waveCount > 0 && (
+                <p className="mt-3 flex items-center gap-1.5 text-xs text-zinc-500">
+                  <Users className="h-3.5 w-3.5 text-emerald-400" aria-hidden />
+                  <span>
+                    <span className="font-bold text-emerald-400">{waveCount}</span>{' '}
+                    {plural(waveCount, 'водитель', 'водителя', 'водителей')} уже в списке первой
+                    волны
+                  </span>
+                </p>
+              )}
+            </motion.div>
+
             <motion.dl
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -272,9 +301,15 @@ export function Hero() {
                 </p>
                 <p
                   ref={ref}
+                  role="timer"
+                  aria-label="Счётчик переплат водителей за сегодня"
                   className="mt-1 text-3xl font-black tabular-nums tracking-tight text-rose-400 sm:text-4xl"
                 >
                   {rub(value)}
+                </p>
+                <p className="sr-only" aria-live="polite">
+                  Оценка переплат водителей агрегаторам за сегодня: примерно {rub(DAILY_OVERPAY)} за
+                  полный день.
                 </p>
                 <p className="mt-1 text-xs text-zinc-500">
                   за сегодня · оценка: 9,3 млн поездок × 450 ₽ × ~40% совокупных потерь

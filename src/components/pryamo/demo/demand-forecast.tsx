@@ -1,20 +1,20 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  ReferenceLine,
-  LabelList,
-} from 'recharts'
 import { Sunrise, Sunset, Clock4, TrendingUp, MoonStar } from 'lucide-react'
 import type { ZoneDTO } from '@/lib/pryamo/types'
+
+// recharts — тяжёлый: грузим отдельным чанком после гидрации
+const ForecastChart = dynamic(() => import('./forecast-chart').then((m) => m.ForecastChart), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full w-full items-center justify-center text-xs text-zinc-600">
+      график спроса загружается…
+    </div>
+  ),
+})
 
 // Базовый суточный профиль спроса (0..100): ночной провал, утренний пик,
 // дневное плато, вечерний пик, спад. Модулируется живым спросом зон.
@@ -95,7 +95,7 @@ export function DemandForecast({ zones }: { zones: ZoneDTO[] }) {
       : advice.tone === 'good'
         ? 'border-emerald-500/30 bg-emerald-500/8 text-emerald-200'
         : advice.tone === 'night'
-          ? 'border-indigo-0 border-zinc-700 bg-zinc-800/60 text-zinc-300'
+          ? 'border-zinc-700 bg-zinc-800/60 text-zinc-300'
           : 'border-amber-400/30 bg-amber-400/8 text-amber-200'
 
   return (
@@ -119,60 +119,7 @@ export function DemandForecast({ zones }: { zones: ZoneDTO[] }) {
       </div>
 
       <div className="mt-4 h-44">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 10, right: 6, left: -18, bottom: 0 }}>
-            <defs>
-              <linearGradient id="demandFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#10b981" stopOpacity={0.45} />
-                <stop offset="100%" stopColor="#10b981" stopOpacity={0.02} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-            <XAxis
-              dataKey="label"
-              tick={{ fill: '#71717a', fontSize: 10 }}
-              axisLine={{ stroke: '#3f3f46' }}
-              tickLine={false}
-              interval={2}
-            />
-            <YAxis
-              tick={{ fill: '#71717a', fontSize: 10 }}
-              axisLine={false}
-              tickLine={false}
-              tickFormatter={(v: number) => `${v}`}
-              domain={[0, 100]}
-            />
-            <Tooltip
-              cursor={{ stroke: '#52525b', strokeDasharray: '4 4' }}
-              contentStyle={{
-                background: '#18181b',
-                border: '1px solid #3f3f46',
-                borderRadius: 12,
-                color: '#fafafa',
-                fontSize: 12,
-              }}
-              labelStyle={{ color: '#a1a1aa', fontWeight: 700 }}
-              formatter={(value) => [`${value}%`, 'Спрос']}
-            />
-            <Area
-              type="monotone"
-              dataKey="demand"
-              stroke="#10b981"
-              strokeWidth={2.5}
-              fill="url(#demandFill)"
-              dot={false}
-              activeDot={{ r: 4, fill: '#facc15', stroke: '#18181b', strokeWidth: 2 }}
-            />
-            {nowHour !== null && (
-              <ReferenceLine
-                x={hourLabel(nowHour)}
-                stroke="#facc15"
-                strokeWidth={2}
-                strokeDasharray="5 5"
-              />
-            )}
-          </AreaChart>
-        </ResponsiveContainer>
+        <ForecastChart data={data} nowHour={nowHour} />
       </div>
 
       {/* Пики дня */}

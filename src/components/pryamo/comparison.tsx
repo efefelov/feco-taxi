@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Check, X, Scale } from 'lucide-react'
+import { Check, X, Scale, MoveHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface Row {
@@ -102,9 +102,10 @@ export function Comparison() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-60px' }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="mt-12 overflow-hidden rounded-2xl border border-zinc-200 shadow-xl shadow-zinc-200/50"
+          className="table-scroll mt-12 overflow-x-auto rounded-2xl border border-zinc-200 shadow-xl shadow-zinc-200/50"
         >
-          {/* Заголовок таблицы */}
+          {/* Заголовок таблицы: на мобильных — горизонтальный скролл, min-w не даёт тексту обрезаться */}
+          <div className="min-w-[600px] sm:min-w-0">
           <div className="grid grid-cols-[1.2fr_1fr_1fr] border-b border-zinc-200 bg-zinc-50">
             <div className="px-4 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 sm:px-6">
               Параметр
@@ -156,10 +157,15 @@ export function Comparison() {
               </motion.div>
             ))}
           </div>
+          </div>
         </motion.div>
 
         <p className="mt-4 text-center text-xs text-zinc-400">
           По данным открытых источников, оферты, судебной практики и драйверских сообществ, 2024–2025
+        </p>
+        <p className="mt-1 flex items-center justify-center gap-1.5 text-center text-xs text-zinc-400 sm:hidden">
+          <MoveHorizontal className="h-3.5 w-3.5" aria-hidden />
+          Таблицу можно прокрутить в сторону
         </p>
       </div>
     </section>

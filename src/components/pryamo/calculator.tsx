@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
@@ -12,19 +13,22 @@ import {
 } from 'lucide-react'
 import { Slider } from '@/components/ui/slider'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  LabelList,
-} from 'recharts'
 import type { CalculatorResult } from '@/lib/pryamo/types'
 import { rub } from '@/lib/pryamo/format'
 import { cn } from '@/lib/utils'
+
+// recharts — тяжёлый: грузим отдельным чанком после гидрации
+const CalculatorChart = dynamic(
+  () => import('./calculator-chart').then((m) => m.CalculatorChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full w-full items-center justify-center">
+        <span className="text-xs text-zinc-600">график загружается…</span>
+      </div>
+    ),
+  }
+)
 
 interface SliderDef {
   key: 'hoursPerDay' | 'daysPerMonth' | 'avgCheck' | 'ridesPerHour'
@@ -213,43 +217,7 @@ export function IncomeCalculator() {
                 {loading && <span className="text-xs text-emerald-400">пересчёт…</span>}
               </div>
               <div className="h-72">
-                {result && (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} margin={{ top: 24, right: 8, left: 8, bottom: 4 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-                      <XAxis
-                        dataKey="name"
-                        tick={{ fill: '#a1a1aa', fontSize: 12 }}
-                        axisLine={{ stroke: '#3f3f46' }}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        tick={{ fill: '#a1a1aa', fontSize: 11 }}
-                        axisLine={false}
-                        tickLine={false}
-                        tickFormatter={(v: number) => `${Math.round(v / 1000)}к`}
-                      />
-                      <Tooltip
-                        cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-                        contentStyle={{
-                          background: '#18181b',
-                          border: '1px solid #3f3f46',
-                          borderRadius: 12,
-                          color: '#fafafa',
-                        }}
-                        formatter={(value) => [rub(Number(value)), 'Доход']}
-                      />
-                      <Bar dataKey="value" radius={[8, 8, 0, 0]} maxBarSize={72}>
-                        <LabelList
-                          dataKey="value"
-                          position="top"
-                          formatter={(v: number) => `${Math.round(v / 1000)}к ₽`}
-                          style={{ fill: '#d4d4d8', fontSize: 11, fontWeight: 700 }}
-                        />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
+                {result && <CalculatorChart data={chartData} />}
               </div>
             </div>
 

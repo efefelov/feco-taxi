@@ -18,6 +18,7 @@ import {
   Wallet,
   Ban,
   ArrowRight,
+  Quote,
 } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
@@ -155,22 +156,39 @@ function PainCard({ pain, index }: { pain: Pain; index: number }) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-30px' }}
       transition={{ duration: 0.4, delay: index * 0.05 }}
-      className="group flex h-full flex-col rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-rose-200 hover:shadow-lg"
+      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm transition-all hover:-translate-y-1 hover:border-rose-200 hover:shadow-lg hover:shadow-rose-100"
     >
-      <div className="flex items-start gap-3">
-        <span className="shrink-0 rounded-xl bg-rose-50 p-2.5 text-rose-500 transition-colors group-hover:bg-rose-100">
+      {/* Призрачный номер — визуальный ритм сетки */}
+      <span
+        className="pointer-events-none absolute -top-2 right-3 select-none text-5xl font-black text-zinc-100 transition-colors group-hover:text-rose-100"
+        aria-hidden="true"
+      >
+        {String(index + 1).padStart(2, '0')}
+      </span>
+      {/* Тонкая розовая линия сверху при ховере */}
+      <span
+        className="pointer-events-none absolute inset-x-0 top-0 h-0.5 origin-left scale-x-0 bg-gradient-to-r from-rose-400 to-rose-200 transition-transform duration-300 group-hover:scale-x-100"
+        aria-hidden="true"
+      />
+
+      <div className="relative flex items-start gap-3">
+        <span className="shrink-0 rounded-xl bg-rose-50 p-2.5 text-rose-500 ring-1 ring-rose-100 transition-colors group-hover:bg-rose-100">
           <pain.icon className="h-5 w-5" />
         </span>
         <div className="min-w-0">
           <h3 className="text-base font-bold leading-snug text-zinc-900">{pain.title}</h3>
-          <p className="mt-1.5 text-sm leading-relaxed text-zinc-600">{pain.problem}</p>
+          <p className="mt-2 text-sm leading-relaxed text-zinc-600">{pain.problem}</p>
         </div>
       </div>
-      <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
-        {pain.data}
+
+      {/* Источник данных — чип с кавычкой */}
+      <p className="mt-3 inline-flex max-w-full items-center gap-1.5 self-start rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[10px] font-semibold text-zinc-500">
+        <Quote className="h-3 w-3 shrink-0 text-zinc-400" aria-hidden="true" />
+        <span className="truncate">{pain.data}</span>
       </p>
+
       <div className="mt-auto pt-4">
-        <div className="flex items-start gap-2 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900">
+        <div className="flex items-start gap-2 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900 ring-1 ring-emerald-100">
           <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
           <p>
             <strong className="font-bold text-emerald-700">Решение ПРЯМО: </strong>
@@ -233,7 +251,7 @@ export function PainPoints() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35 }}
                 className={cn(
-                  'grid gap-4',
+                  'grid gap-5',
                   tab === 'driver' ? 'md:grid-cols-2 xl:grid-cols-4' : 'md:grid-cols-2 xl:grid-cols-3'
                 )}
               >
