@@ -19,16 +19,16 @@
   <!-- декор: призрак цифры экспансии -->
   <div data-decor aria-hidden="true" class="num" style="position:absolute;top:30px;right:58px;font-size:150px;font-weight:800;line-height:1;color:rgba(250,250,250,.04);z-index:0;">5–7</div>
 
-  <div style="position:relative;z-index:1;height:100%;display:flex;flex-direction:column;padding:46px 64px 34px;">
+  <div style="position:relative;z-index:1;height:100%;display:flex;flex-direction:column;padding:40px 64px 28px;">
 
     <!-- шапка -->
     <div class="kicker">GO-TO-MARKET</div>
-    <h1 style="margin-top:12px;font-family:var(--font-heading);font-weight:700;font-size:42px;line-height:1.18;letter-spacing:-.01em;color:var(--primary);">
+    <h1 style="margin-top:8px;font-family:var(--font-heading);font-weight:700;font-size:42px;line-height:1.18;letter-spacing:-.01em;color:var(--primary);">
       Город-домино: <span style="color:var(--accent);">плотность</span><br>раньше масштаба
     </h1>
 
     <!-- цепочка домино -->
-    <div style="margin-top:24px;display:flex;gap:12px;height:238px;">
+    <div style="margin-top:14px;display:flex;gap:12px;height:238px;">
       <div class="card domino">
         <div class="tile num">01</div>
         <div style="margin-top:16px;display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;">
@@ -79,8 +79,25 @@
       </div>
     </div>
 
+    <!-- 04 · опция Ф: франшизная экспансия (четвёртое домино, компактная полоса-строка) -->
+    <div class="card card-accent" style="margin-top:12px;height:60px;display:flex;align-items:center;gap:14px;padding:0 22px;">
+      <div class="tile num" style="width:34px;height:34px;font-size:13px;border-color:rgba(16,185,129,.45);color:var(--accent);background:rgba(16,185,129,.15);">04</div>
+      <div style="flex:none;width:232px;">
+        <div style="font-family:var(--font-heading);font-weight:700;font-size:13px;color:var(--accent);">ОПЦИЯ Ф · Ф3</div>
+        <div style="margin-top:3px;font-size:11.5px;color:var(--secondary);">франшизная сеть топ-30</div>
+      </div>
+      <div style="width:1px;height:36px;background:rgba(16,185,129,.3);flex:none;"></div>
+      <p style="flex:1;font-size:12px;color:var(--secondary);line-height:1.45;">
+        <span style="color:var(--primary);font-weight:700;">Партнёры в поле, платформа в центре.</span> Роялти центру <span class="num" style="color:var(--primary);font-weight:700;">~32–37 ₽</span>/поездка (оценка) — без капитала и операционки; паушаль <span class="num" style="color:var(--primary);font-weight:700;">250–400 тыс.</span> — фильтр, не прибыль
+      </p>
+      <div style="flex:none;border-left:1px solid rgba(16,185,129,.3);padding-left:16px;">
+        <div class="num" style="font-size:13.5px;font-weight:700;color:var(--accent);white-space:nowrap;">B-12 + Ф = охват B-24</div>
+        <div style="margin-top:3px;font-size:10.5px;color:var(--secondary);white-space:nowrap;">без раунда 70–90 млн ₽</div>
+      </div>
+    </div>
+
     <!-- правило верёвки -->
-    <div class="card-amber" style="margin-top:18px;height:64px;display:flex;align-items:center;gap:14px;padding:0 22px;">
+    <div class="card-amber" style="margin-top:12px;height:64px;display:flex;align-items:center;gap:14px;padding:0 22px;">
       <i class="material-icons" style="font-size:20px;color:var(--amber);">link</i>
       <span style="font-family:var(--font-heading);font-weight:700;font-size:13px;color:var(--amber);white-space:nowrap;">ПРАВИЛО ВЁРОВКИ</span>
       <span style="width:1px;height:26px;background:rgba(245,158,11,.35);flex:none;"></span>
@@ -90,7 +107,7 @@
     </div>
 
     <!-- метрики запуска -->
-    <div style="margin-top:20px;display:flex;height:138px;">
+    <div style="margin-top:12px;display:flex;height:114px;">
       <div style="flex:1;padding-right:20px;">
         <div class="stat-label">CAC рефералки</div>
         <div style="margin-top:8px;display:flex;align-items:baseline;gap:7px;">
@@ -122,6 +139,7 @@
     <li>Стартуем в одном городе-миллионнике (не Москва): 1 000 водителей-основателей, 0% на 3 месяца.</li>
     <li>Ликвидность считаем достигнутой, когда 2 недели подряд ETA ≤ 7 мин и выполнение ≥ 80% — только потом идём дальше.</li>
     <li>Дальше 5–7 городов плейбуком: каждый следующий дешевле, цель −30% к стоимости запуска.</li>
+    <li>Опция Ф: Ф1 свой эталон → Ф2 2–3 пилота → Ф3 франшизная сеть топ-30, Додо-модель; роялти ~34 ₽/поездка центру при нуле капзат; юрконструкция — единый агрегатор + операционные партнёры-агенты.</li>
     <li>Правило верёвки: район за районом — не расширяем гео, пока ETA не стабилен; анти-спешка и в маркетинге.</li>
     <li>Юниты GTM: CAC рефералки 9% от маржи (5 400 ₽ против 59 400 ₽ за 6 мес, платится постфактум); приглашение пассажира 300 ₽ окупается 6 поездками; запуск города 0,5–0,9 млн ₽ в bootstrap.</li>
   </ul>

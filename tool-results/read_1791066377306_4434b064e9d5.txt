@@ -1,0 +1,536 @@
+     1→#!/usr/bin/env python3
+     2→"""ПРЯМО · Когортная финансовая модель сценариев (B-12 / B-18 / B-24).
+     3→Живые формулы, редактируемые допущения (синий шрифт), когортная матрица, PnL 24 мес, Review-сверка."""
+     4→import sys, os
+     5→
+     6→XLSX_SKILL_DIR = "/home/z/my-project/skills/xlsx"
+     7→for sub in [XLSX_SKILL_DIR, os.path.join(XLSX_SKILL_DIR, "templates")]:
+     8→    if sub not in sys.path:
+     9→        sys.path.insert(0, sub)
+    10→
+    11→import base
+    12→base.use_palette_explicit("bottega")  # тёмно-зелёная палитра под бренд (без синих акцентов)
+    13→# Кириллическая модель: Calibri доступен везде, тонкий штрих — болд разрешён
+    14→base.FONT_NAME = "Calibri"
+    15→base.HEADER_BOLD = True
+    16→
+    17→from openpyxl import Workbook
+    18→from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    19→from openpyxl.utils import get_column_letter
+    20→from openpyxl.worksheet.datavalidation import DataValidation
+    21→from openpyxl.chart import LineChart, Reference
+    22→from openpyxl.comments import Comment
+    23→
+    24→P = base.PRIMARY
+    25→INPUT_FONT = Font(name=base.FONT_NAME, size=11, color="0000FF")          # IB: ручной ввод
+    26→INPUT_FILL = PatternFill("solid", fgColor="FFF9E7")                       # мягкая маркировка ввода
+    27→FORMULA_FONT = Font(name=base.FONT_NAME, size=11, color=base.NEUTRAL_900)
+    28→XREF_FONT = Font(name=base.FONT_NAME, size=11, color="008000")            # IB: межлистовые ссылки
+    29→CAPTION_FONT = Font(name=base.FONT_NAME, size=9, color=base.NEUTRAL_600)
+    30→
+    31→FMT_INT = '#,##0'
+    32→FMT_RUB = '#,##0" \u20bd"'
+    33→FMT_RUB_MM = '#,##0.0,," \u043c\u043b\u043d \u20bd"'
+    34→FMT_PCT = '0.0%'
+    35→FMT_DEC = '#,##0.0'
+    36→
+    37→MONTHS = 24
+    38→COL0 = 3  # месяц 1 в колонке C
+    39→def mcol(m):  # номер колонки месяца m (1..24)
+    40→    return COL0 + m - 1
+    41→
+    42→
+    43→def put(ws, row, col, value, font=None, fmt=None, fill=None, align=None, comment=None):
+    44→    c = ws.cell(row=row, column=col, value=value)
+    45→    c.font = font or FORMULA_FONT
+    46→    if fmt: c.number_format = fmt
+    47→    if fill: c.fill = fill
+    48→    c.alignment = align or Alignment(horizontal="right" if fmt else "left", vertical="center")
+    49→    if comment: c.comment = Comment(comment, "Z.ai")
+    50→    return c
+    51→
+    52→
+    53→def section(ws, row, text, col_start=2, col_end=6):
+    54→    ws.merge_cells(start_row=row, start_column=col_start, end_row=row, end_column=col_end)
+    55→    c = ws.cell(row=row, column=col_start, value=text)
+    56→    c.fill = PatternFill("solid", fgColor=P)
+    57→    c.font = Font(name=base.FONT_NAME, size=12, bold=True, color="FFFFFF")
+    58→    c.alignment = Alignment(horizontal="left", vertical="center")
+    59→    ws.row_dimensions[row].height = 24
+    60→
+    61→
+    62→def label(ws, row, text, indent=False):
+    63→    c = ws.cell(row=row, column=2, value=("   " + text) if indent else text)
+    64→    c.font = Font(name=base.FONT_NAME, size=11, bold=False, color=base.NEUTRAL_900)
+    65→    c.alignment = Alignment(horizontal="left", vertical="center")
+    66→
+    67→
+    68→def caption(ws, row, text, col=2):
+    69→    c = ws.cell(row=row, column=col, value=text)
+    70→    c.font = CAPTION_FONT
+    71→    c.alignment = Alignment(horizontal="left", vertical="center", wrap_text=False)
+    72→
+    73→
+    74→wb = Workbook()
+    75→wb.properties.creator = "Z.ai"
+    76→
+    77→# ───────────────────────────── Лист: Допущения ─────────────────────────────
+    78→ws_a = wb.active
+    79→ws_a.title = "Допущения"
+    80→base.setup_sheet(ws_a, "ПРЯМО · Допущения модели", last_col=5)
+    81→ws_a.column_dimensions["B"].width = 52
+    82→ws_a.column_dimensions["C"].width = 16
+    83→ws_a.column_dimensions["D"].width = 12
+    84→ws_a.column_dimensions["E"].width = 46
+    85→
+    86→section(ws_a, 4, "Юнит-экономика поездки")
+    87→rows_unit = [
+    88→    ("Средний чек поездки, \u20bd", 825, FMT_RUB, "Факт: unit-расчёт проекта (чек 825 \u20bd)"),
+    89→    ("Комиссия ПРЯМО (PAYG)", 0.12, FMT_PCT, "Факт: оферта — 12% фикс"),
+    90→    ("Эквайринг, \u20bd/поездка", 12, FMT_RUB, "Факт: unit-расчёт"),
+    91→    ("ФГИС и инфраструктура, \u20bd/поездка", 20, FMT_RUB, "Факт: unit-расчёт"),
+    92→    ("Поддержка, \u20bd/поездка", 13, FMT_RUB, "Факт: unit-расчёт"),
+    93→]
+    94→r = 5
+    95→for name, val, fmt, src in rows_unit:
+    96→    label(ws_a, r, name)
+    97→    put(ws_a, r, 3, val, INPUT_FONT, fmt, INPUT_FILL, comment=src)
+    98→    caption(ws_a, r, "источник: " + src.split(":")[0].lower(), 4)
+    99→    r += 1
+   100→label(ws_a, 10, "Комиссия с чека, \u20bd")
+   101→put(ws_a, 10, 3, "=C5*C6", FORMULA_FONT, FMT_RUB)
+   102→label(ws_a, 11, "Маржа платформы с поездки PAYG, \u20bd")
+   103→put(ws_a, 11, 3, "=C10-C7-C8-C9", Font(name=base.FONT_NAME, size=11, bold=True, color=P), FMT_RUB,
+   104→    fill=PatternFill("solid", fgColor=base.SECONDARY))
+   105→
+   106→section(ws_a, 13, "Подписка Pro")
+   107→label(ws_a, 14, "Цена Pro, \u20bd/мес")
+   108→put(ws_a, 14, 3, 2490, INPUT_FONT, FMT_RUB, INPUT_FILL, comment="Факт: оферта")
+   109→label(ws_a, 15, "Доля водителей на Pro")
+   110→put(ws_a, 15, 3, 0.40, INPUT_FONT, FMT_PCT, INPUT_FILL, comment="Допущение (ранние оценки проекта: ~40%)")
+   111→label(ws_a, 16, "Точка безразличия Pro для водителя, \u20bd/мес выручки")
+   112→put(ws_a, 16, 3, "=C14/C6", FORMULA_FONT, FMT_RUB)
+   113→label(ws_a, 17, "Нагрузка безубыточности Pro для платформы, поездок/мес")
+   114→put(ws_a, 17, 3, "=C14/(C7+C8+C9)", FORMULA_FONT, FMT_DEC,
+   115→    comment="Выше этой нагрузки Pro-водитель субсидирован платформой — цена лояльности, решение основателя")
+   116→
+   117→section(ws_a, 19, "Водители и когорты")
+   118→label(ws_a, 20, "Заказов на активного водителя в день")
+   119→put(ws_a, 20, 3, 9, INPUT_FONT, FMT_DEC, INPUT_FILL,
+   120→    comment="Допущение. В реальной смене основателя 20 заказов за ночь; консервативное среднее по сети")
+   121→label(ws_a, 21, "Активных дней в месяц")
+   122→put(ws_a, 21, 3, 22, INPUT_FONT, FMT_INT, INPUT_FILL, comment="Допущение")
+   123→label(ws_a, 22, "Заказов на водителя в месяц")
+   124→put(ws_a, 22, 3, "=C20*C21", FORMULA_FONT, FMT_INT)
+   125→label(ws_a, 23, "Отток водителей (churn), %/мес")
+   126→put(ws_a, 23, 3, 0.06, INPUT_FONT, FMT_PCT, INPUT_FILL, comment="Допущение; калибруется данными беты")
+   127→label(ws_a, 24, "Оборот водителя (GMV), \u20bd/мес")
+   128→put(ws_a, 24, 3, "=C22*C5", FORMULA_FONT, FMT_RUB)
+   129→
+   130→section(ws_a, 26, "Сценарные общие параметры")
+   131→label(ws_a, 27, "Новых водителей в месяц на активный город")
+   132→put(ws_a, 27, 3, 120, INPUT_FONT, FMT_INT, INPUT_FILL,
+   133→    comment="Допущение: ~1 000 водителей за ~6 месяцев на город („первая волна“)")
+   134→label(ws_a, 28, "Полевой запуск города (разовый), \u20bd")
+   135→put(ws_a, 28, 3, 450000, INPUT_FONT, FMT_RUB, INPUT_FILL, comment="Допущение: диапазон 300–600 тыс. \u20bd")
+   136→label(ws_a, 29, "Собственные средства на старте, \u20bd")
+   137→put(ws_a, 29, 3, 300000, INPUT_FONT, FMT_RUB, INPUT_FILL, comment="Допущение")
+   138→label(ws_a, 30, "CAC водителя (затраты на привлечение), \u20bd")
+   139→put(ws_a, 30, 3, 3600, INPUT_FONT, FMT_RUB, INPUT_FILL,
+   140→    comment="Допущение: полевой скрипт + реферальные 5% на 6 мес, размазанные на приведённого. Документ №1: CAC рефералки ≤ 5 400 \u20bd")
+   141→
+   142→section(ws_a, 32, "Маржа платформы на водителя (blended)")
+   143→label(ws_a, 33, "Маржа платформы на активного водителя, \u20bd/мес")
+   144→put(ws_a, 33, 3, "=(1-C15)*C22*C11+C15*(C14-C22*(C7+C8+C9))",
+   145→    Font(name=base.FONT_NAME, size=11, bold=True, color=P), FMT_RUB,
+   146→    fill=PatternFill("solid", fgColor=base.SECONDARY),
+   147→    comment="PAYG-водитель даёт 198 поездок × 54 \u20bd; Pro-водитель — подписка минус переменные издержки его поездок")
+   148→
+   149→hdr = ws_a.cell(row=35, column=2, value="Доля Pro (сензитивность)")
+   150→hdr.font = Font(name=base.FONT_NAME, size=11, bold=True, color=base.NEUTRAL_900)
+   151→put(ws_a, 35, 3, "Маржа платформы на водителя, \u20bd/мес", Font(name=base.FONT_NAME, size=11, bold=True, color=base.NEUTRAL_900))
+   152→for i, share in enumerate([0.0, 0.2, 0.4, 0.6, 0.8]):
+   153→    rr = 36 + i
+   154→    put(ws_a, rr, 2, share, INPUT_FONT, FMT_PCT, INPUT_FILL)
+   155→    put(ws_a, rr, 3, f"=(1-B{rr})*$C$22*$C$11+B{rr}*($C$14-$C$22*($C$7+$C$8+$C$9))", FORMULA_FONT, FMT_RUB)
+   156→caption(ws_a, 42, "Синие ячейки — редактируемые допущения; чёрные — формулы. Факты проекта: чек 825 \u20bd, комиссия 12%, Pro 2 490 \u20bd (оферта, лендинг).")
+   157→
+   158→# ───────────────────────────── Лист: Сценарии ─────────────────────────────
+   159→ws_s = wb.create_sheet("Сценарии")
+   160→base.setup_sheet(ws_s, "Сценарии посева: параметры, сравнение, расчётный блок", last_col=26)
+   161→ws_s.column_dimensions["B"].width = 44
+   162→for m in range(1, MONTHS + 1):
+   163→    ws_s.column_dimensions[get_column_letter(mcol(m))].width = 11
+   164→
+   165→section(ws_s, 4, "Параметры сценариев", 2, 5)
+   166→for col, name in [(2, "Параметр"), (3, "B-12"), (4, "B-18"), (5, "B-24")]:
+   167→    c = ws_s.cell(row=5, column=col, value=name)
+   168→    c.font = Font(name=base.FONT_NAME, size=11, bold=True, color="FFFFFF")
+   169→    c.fill = PatternFill("solid", fgColor=P)
+   170→    c.alignment = Alignment(horizontal="center", vertical="center")
+   171→ws_s.row_dimensions[5].height = 24
+   172→
+   173→scen_params = [
+   174→    ("Раунд (середина диапазона), млн \u20bd", [17.5, 40, 80], FMT_DEC, "Диапазоны: 15–20 / 35–45 / 70–90 млн \u20bd (документы проекта)"),
+   175→    ("ФОТ платформы на крейсере, \u20bd/мес", [1200000, 1450000, 1700000], FMT_RUB, "Допущение из документа «Бюджет»"),
+   176→    ("Месяц старта ФОТ", [3, 1, 1], FMT_INT, "B-12 позже собирает команду"),
+   177→    ("Месяц запуска города 1", [1, 1, 1], FMT_INT, None),
+   178→    ("Месяц запуска города 2", [8, 6, 5], FMT_INT, None),
+   179→    ("Месяц запуска города 3", [20, 11, 9], FMT_INT, None),
+   180→    ("Месяц запуска города 4", [None, 16, 13], FMT_INT, "Пусто — город не запускается на горизонте"),
+   181→    ("Месяц запуска города 5", [None, None, 17], FMT_INT, None),
+   182→    ("Месяц запуска города 6", [None, None, 21], FMT_INT, None),
+   183→    ("Месяц запуска города 7", [None, None, 23], FMT_INT, None),
+   184→]
+   185→r = 6
+   186→for name, vals, fmt, src in scen_params:
+   187→    label(ws_s, r, name)
+   188→    for j, v in enumerate(vals):
+   189→        cell = ws_s.cell(row=r, column=3 + j)
+   190→        if v is not None:
+   191→            cell.value = v
+   192→            cell.font = INPUT_FONT
+   193→            cell.fill = INPUT_FILL
+   194→            cell.number_format = fmt
+   195→        cell.alignment = Alignment(horizontal="right", vertical="center")
+   196→        if src: cell.comment = Comment(src, "Z.ai")
+   197→    r += 1
+   198→
+   199→label(ws_s, 16, "Городов к месяцу 12")
+   200→label(ws_s, 17, "Городов к месяцу 18")
+   201→label(ws_s, 18, "Городов к месяцу 24")
+   202→for j in range(3):
+   203→    cl = get_column_letter(3 + j)
+   204→    put(ws_s, 16, 3 + j, f'=COUNTIF({cl}$9:{cl}$15,"<=12")', FORMULA_FONT, FMT_INT)
+   205→    put(ws_s, 17, 3 + j, f'=COUNTIF({cl}$9:{cl}$15,"<=18")', FORMULA_FONT, FMT_INT)
+   206→    put(ws_s, 18, 3 + j, f'=COUNTIF({cl}$9:{cl}$15,"<=24")', FORMULA_FONT, FMT_INT)
+   207→
+   208→section(ws_s, 20, "Сравнение сценариев (итоги)", 2, 5)
+   209→comp_rows = [
+   210→    ("Активные водители к месяцу 12", FMT_INT),
+   211→    ("Активные водители к месяцу 18", FMT_INT),
+   212→    ("Активные водители к месяцу 24", FMT_INT),
+   213→    ("Заказов в день к месяцу 12", FMT_INT),
+   214→    ("GMV в месяц к месяцу 18, млн \u20bd", FMT_RUB_MM),
+   215→    ("Маржа платформы в месяц к месяцу 18, \u20bd", FMT_RUB),
+   216→    ("Операционный поток в месяц к месяцу 18, \u20bd", FMT_RUB),
+   217→    ("Касса на конец месяца 24, млн \u20bd", FMT_RUB_MM),
+   218→    ("Месяцев с положительной кассой (из 24)", FMT_INT),
+   219→]
+   220→r = 21
+   221→for name, fmt in comp_rows:
+   222→    label(ws_s, r, name)
+   223→    r += 1
+   224→# значения заполняются после расчётного блока (ниже) — формулы с ссылками
+   225→
+   226→section(ws_s, 31, "Расчётный блок: 24 месяца (движок модели)", 2, 26)
+   227→label(ws_s, 32, "Месяц")
+   228→for m in range(1, MONTHS + 1):
+   229→    put(ws_s, 32, mcol(m), m, Font(name=base.FONT_NAME, size=11, bold=True, color=base.NEUTRAL_900), FMT_INT,
+   230→        align=Alignment(horizontal="center", vertical="center"))
+   231→
+   232→engine_spec = [
+   233→    ("Новые водители/мес — {s}", 33, "new"),
+   234→    ("Активные водители — {s}", 36, "act"),
+   235→    ("ФОТ платформы, \u20bd — {s}", 39, "fot"),
+   236→    ("Полевые запуски, \u20bd — {s}", 42, "fld"),
+   237→    ("Операционный поток, \u20bd — {s}", 45, "flow"),
+   238→    ("Касса, \u20bd — {s}", 48, "cash"),
+   239→]
+   240→SCEN_NAMES = ["B-12", "B-18", "B-24"]
+   241→for j, sname in enumerate(SCEN_NAMES):
+   242→    cl = get_column_letter(3 + j)   # колонка параметров сценария (C/D/E)
+   243→    for tpl, row, kind in engine_spec:
+   244→        label(ws_s, row + j, tpl.format(s=sname), indent=True)
+   245→    for m in range(1, MONTHS + 1):
+   246→        c = get_column_letter(mcol(m))
+   247→        # новые водители: темп на город × число активных городов
+   248→        put(ws_s, 33 + j, mcol(m), f"=Допущения!$C$27*COUNTIF(${cl}$9:${cl}$15,\"<=\"&{c}$32)", FORMULA_FONT, FMT_INT)
+   249→        # активные: рекуррентно с оттоком (новые сценария — строка 33+j)
+   250→        if m == 1:
+   251→            put(ws_s, 36 + j, mcol(m), f"={c}{33+j}", FORMULA_FONT, FMT_INT)
+   252→        else:
+   253→            prev = get_column_letter(mcol(m) - 1)
+   254→            put(ws_s, 36 + j, mcol(m), f"={prev}{36+j}*(1-Допущения!$C$23)+{c}{33+j}", FORMULA_FONT, FMT_INT)
+   255→        # ФОТ: ramp 3 месяца до крейсера (крейсер — ${cl}$7, старт — ${cl}$8)
+   256→        put(ws_s, 39 + j, mcol(m),
+   257→            f"=IF({c}$32<${cl}$8,0,MIN(${cl}$7,${cl}$7/3*({c}$32-${cl}$8+1)))", FORMULA_FONT, FMT_RUB)
+   258→        # полевые: разовый платёж в месяц запуска нового города
+   259→        put(ws_s, 42 + j, mcol(m),
+   260→            f"=IF(COUNTIF(${cl}$9:${cl}$15,\"<=\"&{c}$32)>COUNTIF(${cl}$9:${cl}$15,\"<=\"&({c}$32-1)),Допущения!$C$28,0)",
+   261→            FORMULA_FONT, FMT_RUB)
+   262→        # операционный поток: маржа − ФОТ − полевые − маркетинг (новые × CAC)
+   263→        put(ws_s, 45 + j, mcol(m), f"={c}{36+j}*Допущения!$C$33-{c}{39+j}-{c}{42+j}-{c}{33+j}*Допущения!$C$30", FORMULA_FONT, FMT_RUB)
+   264→        # касса (раунд — ${cl}$6)
+   265→        if m == 1:
+   266→            put(ws_s, 48 + j, mcol(m), f"=${cl}$6*1000000+Допущения!$C$29+{c}45", FORMULA_FONT, FMT_RUB)
+   267→        else:
+   268→            prev = get_column_letter(mcol(m) - 1)
+   269→            put(ws_s, 48 + j, mcol(m), f"={prev}{48+j}+{c}45", FORMULA_FONT, FMT_RUB)
+   270→
+   271→# сравнительная таблица: ссылки на блок
+   272→comp_formulas = [
+   273→    lambda j: f"={get_column_letter(mcol(12))}{36+j}",
+   274→    lambda j: f"={get_column_letter(mcol(18))}{36+j}",
+   275→    lambda j: f"={get_column_letter(mcol(24))}{36+j}",
+   276→    lambda j: f"={get_column_letter(mcol(12))}{36+j}*Допущения!$C$20",
+   277→    lambda j: f"={get_column_letter(mcol(18))}{36+j}*Допущения!$C$24",
+   278→    lambda j: f"={get_column_letter(mcol(18))}{36+j}*Допущения!$C$32",
+   279→    lambda j: f"={get_column_letter(mcol(18))}{45+j}",
+   280→    lambda j: f"={get_column_letter(mcol(24))}{48+j}",
+   281→    lambda j: f"=COUNTIF({get_column_letter(mcol(1))}{48+j}:{get_column_letter(mcol(24))}{48+j},\">0\")",
+   282→]
+   283→for i, (name, fmt) in enumerate(comp_rows):
+   284→    for j in range(3):
+   285→        put(ws_s, 21 + i, 3 + j, comp_formulas[i](j), XREF_FONT, fmt)
+   286→caption(ws_s, 52, "Движок: новые водители = темп × активные города; активные — рекуррентно с оттоком; касса = раунд + собственные средства + поток. Детальная раскладка активного сценария — лист PnL, сверка — Review.")
+   287→caption(ws_s, 53, "Синие ячейки — редактируемые. Пустые ячейки месяцев запуска означают, что город не запускается на горизонте 24 мес.")
+   288→
+   289→# ───────────────────────────── Лист: PnL ─────────────────────────────
+   290→ws_p = wb.create_sheet("PnL")
+   291→base.setup_sheet(ws_p, "PnL · активный сценарий, детально, 24 месяца", last_col=26)
+   292→ws_p.column_dimensions["B"].width = 40
+   293→for m in range(1, MONTHS + 1):
+   294→    ws_p.column_dimensions[get_column_letter(mcol(m))].width = 12
+   295→ws_p.row_dimensions[3].height = 0  # скрытая строка номеров месяцев
+   296→ws_p.cell(row=3, column=2, value="мес.").font = CAPTION_FONT
+   297→for m in range(1, MONTHS + 1):
+   298→    c = ws_p.cell(row=3, column=mcol(m), value=m)
+   299→    c.font = CAPTION_FONT
+   300→    c.number_format = FMT_INT
+   301→
+   302→hdr_row = 4
+   303→c = ws_p.cell(row=hdr_row, column=2, value="Показатель")
+   304→c.font = Font(name=base.FONT_NAME, size=11, bold=True, color="FFFFFF")
+   305→c.fill = PatternFill("solid", fgColor=P)
+   306→c.alignment = Alignment(horizontal="left", vertical="center")
+   307→for m in range(1, MONTHS + 1):
+   308→    c = ws_p.cell(row=hdr_row, column=mcol(m), value=f"м{m}")
+   309→    c.font = Font(name=base.FONT_NAME, size=11, bold=True, color="FFFFFF")
+   310→    c.fill = PatternFill("solid", fgColor=P)
+   311→    c.alignment = Alignment(horizontal="center", vertical="center")
+   312→ws_p.row_dimensions[hdr_row].height = 24
+   313→
+   314→SEL = "MATCH(Обзор!$C$4,'Сценарии'!$C$5:$E$5,0)"
+   315→pnl_rows = [
+   316→    ("Новые водители", FMT_INT, lambda c, m: f"=INDEX('Сценарии'!$C$33:$Z$35,{SEL},{c}$3)"),
+   317→    ("Активные водители", FMT_INT, lambda c, m: f"=INDEX('Сценарии'!$C$36:$Z$38,{SEL},{c}$3)"),
+   318→    ("Поездки за месяц", FMT_INT, lambda c, m: f"={c}6*Допущения!$C$22"),
+   319→    ("Заказов в день", FMT_INT, lambda c, m: f"={c}6*Допущения!$C$20"),
+   320→    ("GMV (валовая выручка), \u20bd", FMT_RUB, lambda c, m: f"={c}7*Допущения!$C$5"),
+   321→    ("Поездки PAYG", FMT_INT, lambda c, m: f"={c}7*(1-Допущения!$C$15)"),
+   322→    ("Поездки Pro", FMT_INT, lambda c, m: f"={c}7*Допущения!$C$15"),
+   323→    ("Комиссионная выручка, \u20bd", FMT_RUB, lambda c, m: f"={c}10*Допущения!$C$10"),
+   324→    ("Подписочная выручка Pro, \u20bd", FMT_RUB, lambda c, m: f"={c}6*Допущения!$C$15*Допущения!$C$14"),
+   325→    ("Выручка платформы, \u20bd", FMT_RUB, lambda c, m: f"={c}12+{c}13"),
+   326→    ("Переменные издержки, \u20bd", FMT_RUB, lambda c, m: f"={c}7*(Допущения!$C$7+Допущения!$C$8+Допущения!$C$9)"),
+   327→    ("Маржа платформы, \u20bd", FMT_RUB, lambda c, m: f"={c}14-{c}15"),
+   328→    ("ФОТ платформы, \u20bd", FMT_RUB, lambda c, m: f"=INDEX('Сценарии'!$C$39:$Z$41,{SEL},{c}$3)"),
+   329→    ("Полевые запуски, \u20bd", FMT_RUB, lambda c, m: f"=INDEX('Сценарии'!$C$42:$Z$44,{SEL},{c}$3)"),
+   330→    ("Маркетинг (привлечение), \u20bd", FMT_RUB, lambda c, m: f"={c}5*Допущения!$C$30"),
+   331→    ("Операционный поток, \u20bd", FMT_RUB, lambda c, m: f"={c}16-{c}17-{c}18-{c}19"),
+   332→    ("Накопленный поток, \u20bd", FMT_RUB, lambda c, m: (f"={c}20" if m == 1 else f"={get_column_letter(mcol(m)-1)}21+{c}20")),
+   333→    ("Касса (раунд + поток), \u20bd", FMT_RUB, lambda c, m: f"=INDEX('Сценарии'!$C$48:$Z$50,{SEL},{c}$3)"),
+   334→]
+   335→r = 5
+   336→for name, fmt, fgen in pnl_rows:
+   337→    is_total = name.startswith(("Маржа", "Операционный", "Касса"))
+   338→    lab = ws_p.cell(row=r, column=2, value=name)
+   339→    lab.font = Font(name=base.FONT_NAME, size=11, bold=is_total, color=base.NEUTRAL_900)
+   340→    for m in range(1, MONTHS + 1):
+   341→        cl = get_column_letter(mcol(m))
+   342→        cell = ws_p.cell(row=r, column=mcol(m), value=fgen(cl, m))
+   343→        cell.font = Font(name=base.FONT_NAME, size=11, bold=is_total, color=base.NEUTRAL_900)
+   344→        cell.number_format = fmt
+   345→        cell.alignment = Alignment(horizontal="right", vertical="center")
+   346→        if is_total:
+   347→            cell.fill = PatternFill("solid", fgColor=base.SECONDARY)
+   348→            cell.border = Border(top=Side(style="thin", color=base.NEUTRAL_200))
+   349→    ws_p.row_dimensions[r].height = 20
+   350→    r += 1
+   351→caption(ws_p, 23, "Сценарий выбирается на листе «Обзор» (ячейка C4). Все строки — живые формулы от «Допущений» и движка «Сценариев»; сверка двух представлений — лист Review.")
+   352→ws_p.freeze_panes = "C5"
+   353→
+   354→# ───────────────────────────── Лист: Когорты ─────────────────────────────
+   355→ws_c = wb.create_sheet("Когорты")
+   356→base.setup_sheet(ws_c, "Когорты водителей · активный сценарий (матрица распада)", last_col=26)
+   357→ws_c.column_dimensions["B"].width = 22
+   358→for m in range(1, MONTHS + 1):
+   359→    ws_c.column_dimensions[get_column_letter(mcol(m))].width = 9
+   360→
+   361→c = ws_c.cell(row=4, column=2, value="Новые (когорта)")
+   362→c.font = Font(name=base.FONT_NAME, size=11, bold=True, color="FFFFFF")
+   363→c.fill = PatternFill("solid", fgColor=P)
+   364→c.alignment = Alignment(horizontal="left", vertical="center")
+   365→for m in range(1, MONTHS + 1):
+   366→    c = ws_c.cell(row=4, column=mcol(m), value=m)
+   367→    c.font = Font(name=base.FONT_NAME, size=11, bold=True, color="FFFFFF")
+   368→    c.fill = PatternFill("solid", fgColor=P)
+   369→    c.number_format = FMT_INT
+   370→    c.alignment = Alignment(horizontal="center", vertical="center")
+   371→ws_c.row_dimensions[4].height = 24
+   372→
+   373→for cohort in range(1, MONTHS + 1):
+   374→    r = 4 + cohort
+   375→    put(ws_c, r, 2, f"=INDEX('PnL'!$C$5:$Z$5,{cohort})", FORMULA_FONT, FMT_INT)
+   376→    for m in range(1, MONTHS + 1):
+   377→        cl = get_column_letter(mcol(m))
+   378→        if m < cohort:
+   379→            cell = ws_c.cell(row=r, column=mcol(m), value="")
+   380→        else:
+   381→            cell = ws_c.cell(row=r, column=mcol(m),
+   382→                             value=f"=IF({cl}$4>=ROW()-4,$B{r}*(1-Допущения!$C$23)^({cl}$4-(ROW()-4)),\"\")")
+   383→            cell.number_format = FMT_INT
+   384→        cell.font = Font(name=base.FONT_NAME, size=11, color=base.NEUTRAL_900)
+   385→        cell.alignment = Alignment(horizontal="right", vertical="center")
+   386→        if cohort % 2 == 0:
+   387→            cell.fill = PatternFill("solid", fgColor=base.NEUTRAL_100)
+   388→    ws_c.row_dimensions[r].height = 18
+   389→
+   390→# строка лейблов когорт (слева от чисел) — добавим отдельной колонкой не удалось, подпишем числом в B? B уже занят новыми.
+   391→# Итоговая строка
+   392→tot_r = 5 + MONTHS
+   393→lab = ws_c.cell(row=tot_r, column=2, value="Итого активные")
+   394→lab.font = Font(name=base.FONT_NAME, size=11, bold=True, color=P)
+   395→for m in range(1, MONTHS + 1):
+   396→    cl = get_column_letter(mcol(m))
+   397→    cell = ws_c.cell(row=tot_r, column=mcol(m), value=f"=SUM({cl}5:{cl}{4+MONTHS})")
+   398→    cell.font = Font(name=base.FONT_NAME, size=11, bold=True, color=P)
+   399→    cell.number_format = FMT_INT
+   400→    cell.fill = PatternFill("solid", fgColor=base.SECONDARY)
+   401→    cell.border = Border(top=Side(style="thin", color=base.NEUTRAL_200))
+   402→    cell.alignment = Alignment(horizontal="right", vertical="center")
+   403→ws_c.row_dimensions[tot_r].height = 24
+   404→caption(ws_c, tot_r + 2, "Строка — когорта месяца входа (новые водители этого месяца), колонки — календарные месяцы. Значение: активные водители когорты с учётом оттока. «Итого активные» равен строке «Активные водители» листа PnL — проверяется в Review.")
+   405→ws_c.freeze_panes = "C5"
+   406→
+   407→# ───────────────────────────── Лист: Обзор ─────────────────────────────
+   408→ws_o = wb.create_sheet("Обзор", 0)
+   409→base.setup_sheet(ws_o, "ПРЯМО · Когортная финансовая модель сценариев", last_col=9)
+   410→ws_o.column_dimensions["B"].width = 44
+   411→for col in "CDEFGHI":
+   412→    ws_o.column_dimensions[col].width = 15
+   413→
+   414→label(ws_o, 4, "Активный сценарий (список: B-12 / B-18 / B-24)")
+   415→sel_cell = ws_o.cell(row=4, column=3, value="B-18")
+   416→sel_cell.font = Font(name=base.FONT_NAME, size=12, bold=True, color="0000FF")
+   417→sel_cell.fill = INPUT_FILL
+   418→sel_cell.alignment = Alignment(horizontal="center", vertical="center")
+   419→dv = DataValidation(type="list", formula1='"B-12,B-18,B-24"', allow_blank=False,
+   420→                    promptTitle="Сценарий", prompt="Выберите B-12, B-18 или B-24 — модель пересчитается")
+   421→ws_o.add_data_validation(dv)
+   422→dv.add(ws_o.cell(row=4, column=3))
+   423→caption(ws_o, 5, "Выберите сценарий — листы PnL и Когорты пересчитаются под него.")
+   424→
+   425→section(ws_o, 7, "Ключевые показатели активного сценария")
+   426→kpi_rows = [
+   427→    ("Раунд (середина диапазона), млн \u20bd", f"=INDEX('Сценарии'!$C$6:$E$6,{SEL})", FMT_DEC),
+   428→    ("Активные водители к месяцу 12", f"=PnL!{get_column_letter(mcol(12))}6", FMT_INT),
+   429→    ("Активные водители к месяцу 18", f"=PnL!{get_column_letter(mcol(18))}6", FMT_INT),
+   430→    ("Активные водители к месяцу 24", f"=PnL!{get_column_letter(mcol(24))}6", FMT_INT),
+   431→    ("Заказов в день к месяцу 12", f"=PnL!{get_column_letter(mcol(12))}8", FMT_INT),
+   432→    ("Маржа платформы в месяц к месяцу 18, \u20bd", f"=PnL!{get_column_letter(mcol(18))}16", FMT_RUB),
+   433→    ("Операционный поток в месяц к месяцу 18, \u20bd", f"=PnL!{get_column_letter(mcol(18))}20", FMT_RUB),
+   434→    ("Касса на конец месяца 24, млн \u20bd", f"=PnL!{get_column_letter(mcol(24))}22/1000000", FMT_RUB_MM),
+   435→    ("Месяцев с положительной кассой (из 24)", "=COUNTIF(PnL!C22:Z22,\">0\")", FMT_INT),
+   436→]
+   437→r = 8
+   438→for name, formula, fmt in kpi_rows:
+   439→    label(ws_o, r, name)
+   440→    put(ws_o, r, 3, formula, XREF_FONT, fmt)
+   441→    ws_o.row_dimensions[r].height = 20
+   442→    r += 1
+   443→
+   444→section(ws_o, 18, "Сравнение сценариев")
+   445→hdrs = ["Метрика", "B-12", "B-18", "B-24"]
+   446→for col, h in enumerate(hdrs, start=2):
+   447→    c = ws_o.cell(row=19, column=col, value=h)
+   448→    c.font = Font(name=base.FONT_NAME, size=11, bold=True, color="FFFFFF")
+   449→    c.fill = PatternFill("solid", fgColor=P)
+   450→    c.alignment = Alignment(horizontal="left" if col == 2 else "right", vertical="center")
+   451→ws_o.row_dimensions[19].height = 24
+   452→r = 20
+   453→for i, (name, fmt) in enumerate(comp_rows):
+   454→    label(ws_o, r, name, indent=True)
+   455→    for j in range(3):
+   456→        put(ws_o, r, 3 + j, f"='Сценарии'!{get_column_letter(3+j)}{21+i}", XREF_FONT, fmt)
+   457→    if i % 2 == 0:
+   458→        for col in range(2, 6):
+   459→            ws_o.cell(row=r, column=col).fill = PatternFill("solid", fgColor=base.NEUTRAL_100)
+   460→    r += 1
+   461→
+   462→caption(ws_o, 30, "Ограничения модели: льготы «первой волны» (0% на 3 месяца) не учтены в выручке; налоги юридического лица, споры/возвраты и CAPEX не моделируются (операционная модель). Маркетинг учтён через CAC водителя (Допущения C30). Все синие ячейки — редактируемые допущения.")
+   463→
+   464→# графики
+   465→ch1 = LineChart()
+   466→ch1.title = "Активные водители по месяцам"
+   467→ch1.style = 10
+   468→ch1.width, ch1.height = 20, 9
+   469→data = Reference(ws_s, min_col=2, min_row=36, max_col=26, max_row=38)
+   470→ch1.add_data(data, titles_from_data=True, from_rows=True)
+   471→cats = Reference(ws_s, min_col=3, min_row=32, max_col=26, max_row=32)
+   472→ch1.set_categories(cats)
+   473→ch1.y_axis.title = "активные водители"
+   474→ch1.x_axis.title = "месяц"
+   475→for i, s in enumerate(ch1.series):
+   476→    s.graphicalProperties.line.solidFill = [base.PRIMARY, base.ACCENT_POSITIVE, base.ACCENT_WARNING][i]
+   477→    s.graphicalProperties.line.width = 22000
+   478→    s.smooth = False
+   479→ws_o.add_chart(ch1, "B32")
+   480→
+   481→ch2 = LineChart()
+   482→ch2.title = "Касса по сценариям (раунд + операционный поток), \u20bd"
+   483→ch2.style = 10
+   484→ch2.width, ch2.height = 20, 9
+   485→data2 = Reference(ws_s, min_col=2, min_row=48, max_col=26, max_row=50)
+   486→ch2.add_data(data2, titles_from_data=True, from_rows=True)
+   487→ch2.set_categories(cats)
+   488→ch2.y_axis.title = "\u20bd"
+   489→ch2.x_axis.title = "месяц"
+   490→ch2.y_axis.number_format = '#,##0,,"M"'
+   491→for i, s in enumerate(ch2.series):
+   492→    s.graphicalProperties.line.solidFill = [base.PRIMARY, base.ACCENT_POSITIVE, base.ACCENT_WARNING][i]
+   493→    s.graphicalProperties.line.width = 22000
+   494→    s.smooth = False
+   495→ws_o.add_chart(ch2, "B50")
+   496→
+   497→# ───────────────────────────── Лист: Review ─────────────────────────────
+   498→ws_r = wb.create_sheet("Review")
+   499→ws_r.sheet_properties.tabColor = "FFC000"
+   500→base.setup_sheet(ws_r, "Review · сверка модели", last_col=6)
+   501→ws_r.column_dimensions["B"].width = 56
+   502→ws_r.column_dimensions["C"].width = 18
+   503→ws_r.column_dimensions["D"].width = 18
+   504→ws_r.column_dimensions["E"].width = 12
+   505→for col, h in [(2, "Проверка"), (3, "Ожидание"), (4, "Факт"), (5, "Статус")]:
+   506→    c = ws_r.cell(row=4, column=col, value=h)
+   507→    c.font = Font(name=base.FONT_NAME, size=11, bold=True, color="FFFFFF")
+   508→    c.fill = PatternFill("solid", fgColor=P)
+   509→    c.alignment = Alignment(horizontal="left" if col == 2 else "right", vertical="center")
+   510→ws_r.row_dimensions[4].height = 24
+   511→
+   512→N12, N18, N24 = (get_column_letter(mcol(x)) for x in (12, 18, 24))
+   513→checks = [
+   514→    ("Маржа платформы с поездки PAYG = 54 \u20bd", 54, "=Допущения!C11", FMT_RUB),
+   515→    ("Точка безразличия Pro = 2 490 / 12% \u2248 20 750 \u20bd", 20750, "=Допущения!C16", FMT_RUB),
+   516→    ("Активные к м12: PnL = движок Сценариев", f"=INDEX('Сценарии'!$C$36:$Z$38,{SEL},12)", f"=PnL!{N12}6", FMT_INT),
+   517→    ("Активные к м24: PnL = матрица Когорт (итог)", f"=PnL!{N24}6", f"=Когорты!{N24}{5+MONTHS}", FMT_INT),
+   518→    ("Маржа PnL м24 = активные × маржа на водителя", f"=PnL!{N24}6*Допущения!C33", f"=PnL!{N24}16", FMT_RUB),
+   519→    ("Касса PnL м24 = движок Сценариев", f"=INDEX('Сценарии'!$C$48:$Z$50,{SEL},24)", f"=PnL!{N24}22", FMT_RUB),
+   520→    ("Выручка м24 = комиссия + подписка", f"=PnL!{N24}12+PnL!{N24}13", f"=PnL!{N24}14", FMT_RUB),
+   521→    ("Городов к м24 у B-24 = 7", 7, "='Сценарии'!E18", FMT_INT),
+   522→]
+   523→r = 5
+   524→for name, exp, act, fmt in checks:
+   525→    label(ws_r, r, name)
+   526→    put(ws_r, r, 3, exp, FORMULA_FONT, fmt)
+   527→    put(ws_r, r, 4, act, XREF_FONT, fmt)
+   528→    st = ws_r.cell(row=r, column=5, value=f'=IF(ABS(C{r}-D{r})<0.01,"PASS","FAIL")')
+   529→    st.font = Font(name=base.FONT_NAME, size=11, bold=True, color=base.ACCENT_POSITIVE)
+   530→    st.alignment = Alignment(horizontal="center", vertical="center")
+   531→    r += 1
+   532→caption(ws_r, r + 1, "Все проверки — живые формулы: PASS сходится, FAIL — искать расхождение в соответствующем листе.")
+   533→
+   534→wb.save("/home/z/my-project/public/docs/pryamo-financial-model.xlsx")
+   535→print("saved: pryamo-financial-model.xlsx")
+   536→
