@@ -15,12 +15,19 @@ import {
   Building2,
   Banknote,
   Receipt,
+  Swords,
+  Smartphone,
+  Trophy,
+  Scale,
+  TrendingUp,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
@@ -31,22 +38,46 @@ const NAV = [
   { href: '#problem', label: 'Проблема' },
   { href: '#compare', label: 'Сравнение' },
   { href: '#demo', label: 'Живое демо' },
+  { href: '#shift', label: 'Смена' },
   { href: '#calc', label: 'Калькулятор' },
   { href: '#money', label: 'Монетизация' },
   { href: '#roadmap', label: 'План' },
-  { href: '#join', label: 'Первая волна' },
 ]
 
-/** Выпадающее меню «Продукт»: секции, не влезающие в верхний ряд */
-const PRODUCT_LINKS = [
-  { href: '#tariffs', label: 'Тарифы', desc: 'формула — в оферте', icon: Banknote },
-  { href: '#flow', label: 'Чек', desc: 'куда уходит каждая копейка', icon: Receipt },
-  { href: '#fair', label: 'Аукцион', desc: 'лента без приоритетов', icon: Gavel },
-  { href: '#rating', label: 'Рейтинг 2.0', desc: 'медиана вместо среднего', icon: Star },
-  { href: '#tech', label: 'Технологии', desc: 'навигатор и GPS без клетки', icon: Navigation },
-  { href: '#fleets', label: 'Таксопаркам', desc: 'B2B-подключение', icon: Building2 },
+/** Выпадающее меню «Все разделы»: группы по смыслу */
+const PRODUCT_GROUPS: {
+  title: string
+  links: { href: string; label: string; desc: string; icon: typeof Gavel }[]
+}[] = [
+  {
+    title: 'Экономика',
+    links: [
+      { href: '#tariffs', label: 'Тарифы', desc: 'формула — в оферте', icon: Banknote },
+      { href: '#flow', label: 'Чек', desc: 'куда уходит каждая копейка', icon: Receipt },
+      { href: '#rivals', label: 'Конкуренты', desc: 'весь рынок на одной таблице', icon: Swords },
+    ],
+  },
+  {
+    title: 'Продукт',
+    links: [
+      { href: '#fair', label: 'Аукцион', desc: 'лента без приоритетов', icon: Gavel },
+      { href: '#rating', label: 'Рейтинг 2.0', desc: 'медиана вместо среднего', icon: Star },
+      { href: '#tech', label: 'Технологии', desc: 'навигатор и GPS без клетки', icon: Navigation },
+      { href: '#apps', label: 'Приложения', desc: 'iOS, Android, RuStore, PWA', icon: Smartphone },
+      { href: '#game', label: 'Игра', desc: 'лиги, квесты и колесо', icon: Trophy },
+    ],
+  },
+  {
+    title: 'Проект',
+    links: [
+      { href: '#fleets', label: 'Таксопаркам', desc: 'B2B-подключение', icon: Building2 },
+      { href: '#law', label: 'Закон и отбор', desc: 'ФГИС, медосмотры, путёвки', icon: Scale },
+      { href: '#founders', label: 'Инвесторам', desc: 'ТРИЗ, ТОС и unit-экономика', icon: TrendingUp },
+    ],
+  },
 ]
 
+const PRODUCT_LINKS = PRODUCT_GROUPS.flatMap((g) => g.links)
 const PRODUCT_IDS = PRODUCT_LINKS.map((l) => l.href.slice(1))
 
 export function Navbar() {
@@ -70,7 +101,7 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  // Scroll-spy: подсветка активной секции (прямые + ссылки из «Продукта»)
+  // Scroll-spy: подсветка активной секции (прямые + ссылки из «Все разделы»)
   useEffect(() => {
     const ids = [...NAV, ...PRODUCT_LINKS].map((n) => n.href.slice(1))
     const sections = ids
@@ -148,7 +179,7 @@ export function Navbar() {
               )
             })}
 
-            {/* Выпадающее меню «Продукт» */}
+            {/* Выпадающее меню «Все разделы» */}
             <DropdownMenu>
               <DropdownMenuTrigger
                 className={cn(
@@ -158,9 +189,9 @@ export function Navbar() {
                     : 'text-zinc-300 hover:bg-zinc-800/60 hover:text-white',
                   'data-[state=open]:bg-zinc-800/60 data-[state=open]:text-white'
                 )}
-                aria-label="Разделы продукта"
+                aria-label="Все разделы сайта"
               >
-                Продукт
+                Все разделы
                 <ChevronDown
                   className="h-3.5 w-3.5 transition-transform duration-200 data-[state=open]:rotate-180"
                   aria-hidden
@@ -176,44 +207,52 @@ export function Navbar() {
               <DropdownMenuContent
                 align="start"
                 sideOffset={10}
-                className="w-64 border-zinc-800 bg-zinc-900/95 p-1.5 shadow-xl shadow-black/40 backdrop-blur-xl"
+                className="w-72 border-zinc-800 bg-zinc-900/95 p-1.5 shadow-xl shadow-black/40 backdrop-blur-xl"
               >
-                {PRODUCT_LINKS.map((l) => {
-                  const isActive = active === l.href.slice(1)
-                  return (
-                    <DropdownMenuItem
-                      key={l.href}
-                      asChild
-                      className={cn(
-                        'cursor-pointer gap-3 rounded-lg px-3 py-2.5 outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60',
-                        isActive
-                          ? 'bg-emerald-500/10 text-emerald-300'
-                          : 'text-zinc-300 focus-visible:bg-zinc-800 data-[highlighted]:bg-zinc-800'
-                      )}
-                    >
-                      <a href={l.href}>
-                        <span
+                {PRODUCT_GROUPS.map((group, gi) => (
+                  <div key={group.title}>
+                    {gi > 0 && <DropdownMenuSeparator className="my-1.5 bg-zinc-800" />}
+                    <DropdownMenuLabel className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500">
+                      {group.title}
+                    </DropdownMenuLabel>
+                    {group.links.map((l) => {
+                      const isActive = active === l.href.slice(1)
+                      return (
+                        <DropdownMenuItem
+                          key={l.href}
+                          asChild
                           className={cn(
-                            'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+                            'cursor-pointer gap-3 rounded-lg px-3 py-2.5 outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60',
                             isActive
-                              ? 'bg-emerald-500/15 text-emerald-400'
-                              : 'bg-zinc-800 text-zinc-400'
+                              ? 'bg-emerald-500/10 text-emerald-300'
+                              : 'text-zinc-300 focus-visible:bg-zinc-800 data-[highlighted]:bg-zinc-800'
                           )}
                         >
-                          <l.icon className="h-4 w-4" aria-hidden />
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block text-sm font-semibold leading-tight">
-                            {l.label}
-                          </span>
-                          <span className="block text-[11px] leading-tight text-zinc-500">
-                            {l.desc}
-                          </span>
-                        </span>
-                      </a>
-                    </DropdownMenuItem>
-                  )
-                })}
+                          <a href={l.href}>
+                            <span
+                              className={cn(
+                                'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+                                isActive
+                                  ? 'bg-emerald-500/15 text-emerald-400'
+                                  : 'bg-zinc-800 text-zinc-400'
+                              )}
+                            >
+                              <l.icon className="h-4 w-4" aria-hidden />
+                            </span>
+                            <span className="min-w-0">
+                              <span className="block text-sm font-semibold leading-tight">
+                                {l.label}
+                              </span>
+                              <span className="block text-[11px] leading-tight text-zinc-500">
+                                {l.desc}
+                              </span>
+                            </span>
+                          </a>
+                        </DropdownMenuItem>
+                      )
+                    })}
+                  </div>
+                ))}
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -326,20 +365,26 @@ export function Navbar() {
                   {n.label}
                 </a>
               ))}
-              <p className="px-3 pb-1 pt-3 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600">
-                Продукт
-              </p>
-              {PRODUCT_LINKS.map((l) => (
-                <a
-                  key={l.href}
-                  href={l.href}
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-800/60 hover:text-white"
-                >
-                  <l.icon className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
-                  {l.label}
-                  <span className="ml-auto text-[11px] text-zinc-600">{l.desc}</span>
-                </a>
+              {PRODUCT_GROUPS.map((group) => (
+                <div key={`m-${group.title}`}>
+                  <p className="px-3 pb-1 pt-3 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600">
+                    {group.title}
+                  </p>
+                  {group.links.map((l) => (
+                    <a
+                      key={l.href}
+                      href={l.href}
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-300 hover:bg-zinc-800/60 hover:text-white"
+                    >
+                      <l.icon className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
+                      <span className="shrink-0">{l.label}</span>
+                      <span className="ml-auto max-w-[52%] truncate text-right text-[11px] text-zinc-600">
+                        {l.desc}
+                      </span>
+                    </a>
+                  ))}
+                </div>
               ))}
               <p className="px-3 pb-1 pt-3 text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-600">
                 Далее

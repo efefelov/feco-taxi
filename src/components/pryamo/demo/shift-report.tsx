@@ -60,7 +60,7 @@ function Metric({
 
 /**
  * Отчёт по смене водителя: сводка демо-смены с честной математикой —
- * выплата, комиссия 8%, сравнение с монополистом и судьба заказов из журнала.
+ * выплата, комиссия 12%, сравнение с монополистом и судьба заказов из журнала.
  */
 export function ShiftReport({ open, onOpenChange, earnings, lastRides, history, onJoin }: ShiftReportProps) {
   const [shareState, setShareState] = useState<'idle' | 'ok' | 'fail'>('idle')
@@ -99,12 +99,12 @@ export function ShiftReport({ open, onOpenChange, earnings, lastRides, history, 
     const lines = [
       'Отчёт по смене — ПРЯМО (живое демо)',
       `Выплата на руки: ${rub(earnings.payout)}`,
-      `Оборот ${rub(earnings.gross)} · комиссия 8%: ${rub(earnings.commission)}`,
+      `Оборот ${rub(earnings.gross)} · комиссия 12%: ${rub(earnings.commission)}`,
       `Поездок: ${earnings.rides} · часов онлайн: ${earnings.hoursOnline.toFixed(1).replace('.', ',')} · в час: ${rub(stats.hourly)}`,
       `Та же смена у монополиста: комиссия ~40% = ${rub(stats.yandexTake)}`,
       `Разница в вашу пользу: +${rub(stats.diff)}`,
       'Штрафов за смену: 0 ₽. Отказы не влияли на приоритет.',
-      'ПРЯМО — комиссия 8% вместо 24–37%. pryamo.taxi',
+      'ПРЯМО — комиссия 12% вместо 24–37%. pryamo.taxi',
     ]
     const res = await shareText(lines.join('\n'))
     setShareState(res === 'failed' ? 'fail' : 'ok')
@@ -137,7 +137,7 @@ export function ShiftReport({ open, onOpenChange, earnings, lastRides, history, 
             {rub(earnings.payout)}
           </p>
           <p className="mt-1.5 text-xs text-zinc-500">
-            из оборота {rub(earnings.gross)} · комиссия платформы {rub(earnings.commission)} (8%){' '}
+            из оборота {rub(earnings.gross)} · комиссия платформы {rub(earnings.commission)} (12%){' '}
             — и больше ни одной строчки удержаний
           </p>
         </div>
@@ -169,7 +169,7 @@ export function ShiftReport({ open, onOpenChange, earnings, lastRides, history, 
               <span className="font-black tabular-nums text-rose-300">{rub(stats.yandexTake)}</span>
             </div>
             <div className="flex items-center justify-between gap-3 text-sm">
-              <span className="text-zinc-400">забрали мы (8%, в чеке)</span>
+              <span className="text-zinc-400">забрали мы (12%, в чеке)</span>
               <span className="font-black tabular-nums text-emerald-300">
                 {rub(earnings.commission)}
               </span>

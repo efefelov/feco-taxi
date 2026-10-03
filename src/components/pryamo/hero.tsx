@@ -159,10 +159,10 @@ const RECEIPT_ROWS_YANDEX: ReceiptRow[] = [
 
 const RECEIPT_ROWS_PRYAMO: ReceiptRow[] = [
   { label: 'Пассажир заплатил', value: '540 ₽' },
-  { label: 'Комиссия ПРЯМО', value: '43 ₽', note: '8% фикс' },
+  { label: 'Комиссия ПРЯМО', value: '65 ₽', note: '12% фикс' },
   { label: 'Скрытые списания', value: '0 ₽', note: 'нет' },
   { label: 'Чаевые (100%)', value: '0 ₽', note: 'пассажир решает' },
-  { label: 'Итого водитель получил', value: '497 ₽', positive: true, note: '92%' },
+  { label: 'Итого водитель получил', value: '475 ₽', positive: true, note: '88%' },
 ]
 
 function ReceiptCard({
@@ -294,7 +294,7 @@ export function Hero() {
               className="mt-6 max-w-xl text-lg leading-relaxed text-zinc-400"
             >
               <strong className="text-zinc-200">ПРЯМО</strong> — агрегатор с комиссией{' '}
-              <strong className="text-emerald-400">8% фикс</strong> или{' '}
+              <strong className="text-emerald-400">12% фикс</strong> или{' '}
               <strong className="text-emerald-400">0% по подписке</strong>. Без баллов приоритета,
               без скрытых списаний, без привязки к чужому навигатору. Водитель видит выплату до
               принятия заказа — всегда.
@@ -370,7 +370,7 @@ export function Hero() {
               className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-4"
             >
               {[
-                { icon: BadgePercent, v: '8%', l: 'комиссия фикс' },
+                { icon: BadgePercent, v: '12%', l: 'комиссия фикс' },
                 { icon: ShieldCheck, v: '0 ₽', l: 'штрафов за отказ' },
                 { icon: Timer, v: '~90 сек', l: 'среднее ожидание' },
                 { icon: ReceiptText, v: '100%', l: 'чаевых водителю' },
@@ -442,7 +442,7 @@ export function Hero() {
                 с ПРЯМО оставалось бы водителям
               </p>
               <p className="mt-1 text-2xl font-black tabular-nums text-emerald-400">
-                <CountUp value={1.34} duration={1.4} format={formatBillion} srLabel="около 1,34 млрд ₽" />
+                <CountUp value={1.17} duration={1.4} format={formatBillion} srLabel="около 1,17 млрд ₽" />
               </p>
               <p className="text-[11px] text-emerald-500/80">каждый день</p>
             </div>

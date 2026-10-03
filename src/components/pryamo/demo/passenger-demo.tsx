@@ -276,8 +276,8 @@ export function PassengerDemo() {
                       <span className="font-bold text-emerald-400">{rub(Math.round(price * 0.92))}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-zinc-400">Комиссия ПРЯМО (8%)</span>
-                      <span className="font-semibold text-zinc-300">{rub(Math.round(price * 0.08))}</span>
+                      <span className="text-zinc-400">Комиссия ПРЯМО (12%)</span>
+                      <span className="font-semibold text-zinc-300">{rub(Math.round(price * 0.12))}</span>
                     </div>
                     <p className="pt-1 text-[11px] text-emerald-300/90">
                       Пассажир и водитель видят одну цену. Без пересчётов «по трафику».
@@ -430,7 +430,7 @@ export function PassengerDemo() {
                 <div className="flex justify-between text-zinc-400">
                   <span>Комиссия ПРЯМО</span>
                   <span className="font-semibold text-zinc-300">
-                    {rub(receipt.commissionRub)} · 8%
+                    {rub(receipt.commissionRub)} · 12%
                   </span>
                 </div>
                 {receipt.tip > 0 && (

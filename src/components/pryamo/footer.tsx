@@ -11,13 +11,17 @@ const FOOTER_NAV: { title: string; links: { href: string; label: string }[] }[] 
       { href: '#flow', label: 'Куда уходит чек' },
       { href: '#fair', label: 'Аукцион против очереди' },
       { href: '#tech', label: 'Навигатор и GPS' },
+      { href: '#apps', label: 'Приложения и установка' },
+      { href: '#game', label: 'Игра и лиги' },
     ],
   },
   {
     title: 'Экономика',
     links: [
+      { href: '#shift', label: 'Смена под микроскопом' },
       { href: '#calc', label: 'Калькулятор потерь' },
       { href: '#compare', label: 'Честная таблица' },
+      { href: '#rivals', label: 'Конкуренты' },
       { href: '#money', label: 'Монетизация' },
       { href: '#fleets', label: 'Таксопаркам' },
     ],
@@ -26,6 +30,8 @@ const FOOTER_NAV: { title: string; links: { href: string; label: string }[] }[] 
     title: 'Проект',
     links: [
       { href: '#problem', label: 'Проблема' },
+      { href: '#law', label: 'Закон и отбор' },
+      { href: '#founders', label: 'Инвесторам' },
       { href: '#roadmap', label: 'План запуска' },
       { href: '#faq', label: 'Вопросы' },
       { href: '#join', label: 'Первая волна' },
@@ -60,7 +66,7 @@ export function Footer() {
             </p>
             <div className="mt-5 flex items-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/8 px-4 py-2.5 text-xs font-semibold text-emerald-300">
               <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden />
-              Комиссия 8% — зафиксирована в оферте
+              Комиссия 12% — зафиксирована в оферте
             </div>
           </div>
 

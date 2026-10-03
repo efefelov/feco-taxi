@@ -139,7 +139,7 @@ export function IncomeCalculator() {
     ? [
         { name: 'Валовый оборот', value: result.grossMonthly, fill: '#a1a1aa' },
         { name: 'На Яндексе', value: result.yandex.monthly, fill: '#f43f5e' },
-        { name: 'ПРЯМО 8%', value: result.pryamoPayg.monthly, fill: '#34d399' },
+        { name: 'ПРЯМО 12%', value: result.pryamoPayg.monthly, fill: '#34d399' },
         { name: 'ПРЯМО Pro', value: result.pryamoPro.monthly, fill: '#059669' },
       ]
     : []
@@ -189,7 +189,7 @@ export function IncomeCalculator() {
           </h2>
           <p className="mt-4 text-lg text-zinc-400">
             Подвигайте ползунки под свой график. Модель Яндекса: эффективная комиссия ~40% (номинал
-            24% + волатильность + опции). Модель ПРЯМО: 8% или подписка.
+            24% + волатильность + опции). Модель ПРЯМО: 12% или подписка.
           </p>
         </motion.div>
 
@@ -237,14 +237,14 @@ export function IncomeCalculator() {
               <p className="mt-1.5 text-sm leading-relaxed text-zinc-300">
                 {result ? (
                   <>
-                    Подписка выгоднее 8% при обороте от{' '}
+                    Подписка выгоднее 12% при обороте от{' '}
                     <strong className="text-emerald-300">{rub(result.proBreakEven)}</strong> в месяц.
                     При ваших настройках оборот{' '}
                     <strong className="text-white">{rub(result.grossMonthly)}</strong> —{' '}
                     {result.grossMonthly >= result.proBreakEven ? (
                       <span className="font-bold text-emerald-300">берите Pro</span>
                     ) : (
-                      <span className="font-bold text-amber-300">пока платите 8%</span>
+                      <span className="font-bold text-amber-300">пока платите 12%</span>
                     )}
                     .
                   </>

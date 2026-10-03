@@ -14,7 +14,7 @@ const FALLBACK: MarketStat[] = [
   { id: 'commission-volatility', label: 'Волатильность комиссии Яндекса', value: 37, unit: '%', hint: 'Комиссия меняется алгоритмом в реальном времени', source: 'РОСАКАДЕМТРАНС', tone: 'danger' },
   { id: 'citymobil', label: 'Падение доли Ситимобил в Москве', value: 97, unit: '%', hint: 'С 28,7% (2020) до 0,86% (2024): второго игрока больше нет', source: 'ecomhub.ru, 2024', tone: 'danger' },
   { id: 'driver-loss', label: 'Фактические потери водителя от агрегатора', value: 40, unit: '%', hint: 'Комиссия 24%+ + опции + услуги парков + штрафы', source: 'Судебная практика, 2024', tone: 'danger' },
-  { id: 'our-commission', label: 'Комиссия ПРЯМО — фикс', value: 8, unit: '%', hint: 'Или 0% с подпиской ПРЯМО Pro за 1 990 ₽/мес', source: 'Наша оферта', tone: 'success' },
+  { id: 'our-commission', label: 'Комиссия ПРЯМО — фикс', value: 12, unit: '%', hint: 'Или 0% с подпиской ПРЯМО Pro за 2 490 ₽/мес', source: 'Наша оферта', tone: 'success' },
 ]
 
 export function MarketSection() {

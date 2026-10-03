@@ -44,7 +44,7 @@ type Step = 0 | 1 | 2
 // Математика поездки (совпадает с цифрами hero: 540 ₽ чек)
 const RIDE_PRICE = 540
 const TIP = 50
-const PRYAMO_COMMISSION = 43 // 8% фикс
+const PRYAMO_COMMISSION = 65 // 12% фикс
 const YANDEX_PAYOUT = 324 // 60% от чека
 const YANDEX_TOTAL_TAKE = 216
 
@@ -89,7 +89,7 @@ function WizardBody({ onJoin }: { onJoin: () => void }) {
   const [plan, setPlan] = useState<Plan>('percent')
 
   const payoutTotal = plan === 'pro' ? RIDE_PRICE + TIP : RIDE_PRICE - PRYAMO_COMMISSION + TIP
-  const planLabel = plan === 'pro' ? 'Pro · 0% комиссии' : '8% фикс'
+  const planLabel = plan === 'pro' ? 'Pro · 0% комиссии' : '12% фикс'
   const diffVsYandex = payoutTotal - YANDEX_PAYOUT
 
   return (
@@ -176,7 +176,7 @@ function WizardBody({ onJoin }: { onJoin: () => void }) {
                       selected={plan === 'percent'}
                       onSelect={() => setPlan('percent')}
                       icon={Percent}
-                      title="8% фикс"
+                      title="12% фикс"
                       sub="без подписки"
                       detail={`С поездки ${rub(RIDE_PRICE)}: комиссия ${rub(PRYAMO_COMMISSION)}`}
                     />
@@ -185,7 +185,7 @@ function WizardBody({ onJoin }: { onJoin: () => void }) {
                       onSelect={() => setPlan('pro')}
                       icon={Crown}
                       title="ПРЯМО Pro"
-                      sub="1 990 ₽/мес"
+                      sub="2 490 ₽/мес"
                       detail={`С поездки ${rub(RIDE_PRICE)}: комиссия 0 ₽ — всё ваше`}
                     />
                   </div>
@@ -248,7 +248,7 @@ function WizardBody({ onJoin }: { onJoin: () => void }) {
                     <ReceiptRow
                       label="Комиссия ПРЯМО"
                       value={plan === 'pro' ? '0 ₽' : `−${rub(PRYAMO_COMMISSION)}`}
-                      note={plan === 'pro' ? 'подписка' : '8% фикс'}
+                      note={plan === 'pro' ? 'подписка' : '12% фикс'}
                       tone={plan === 'pro' ? 'good' : 'muted'}
                     />
                     <ReceiptRow

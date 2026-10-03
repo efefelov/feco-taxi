@@ -5,7 +5,7 @@ import { Banknote, Coins, Split, UserRound, TrendingDown } from 'lucide-react'
 
 /**
  * «Куда уходит чек» — анимированная визуализация потока денег
- * с одной и той же поездки: ПРЯМО (92% водителю) vs монополист (60%).
+ * с одной и той же поездки: ПРЯМО (88% водителю) vs монополист (60%).
  * Частицы-рубли едут по SVG-путям через animateMotion (SMIL) —
  * ноль JS-нагрузки, работает даже при выключенном JS-таймере.
  */
@@ -28,12 +28,12 @@ const FLOWS: FlowSpec[] = [
   {
     id: 'pryamo',
     passenger: 540,
-    driverCut: 497,
-    platformCut: 43,
+    driverCut: 475,
+    platformCut: 65,
     driverLabel: 'Водителю',
-    driverNote: '92% чека',
+    driverNote: '88% чека',
     platformLabel: 'ПРЯМО',
-    platformNote: '8% фикс',
+    platformNote: '12% фикс',
   },
   {
     id: 'yandex',
@@ -110,7 +110,7 @@ function FlowPanel({ spec, index }: { spec: FlowSpec; index: number }) {
               : 'rounded-full bg-rose-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-rose-400'
           }
         >
-          {isPryamo ? 'комиссия 8%' : 'комиссия 24%+ и «опции»'}
+          {isPryamo ? 'комиссия 12%' : 'комиссия 24%+ и «опции»'}
         </span>
       </div>
 
@@ -120,7 +120,7 @@ function FlowPanel({ spec, index }: { spec: FlowSpec; index: number }) {
         role="img"
         aria-label={
           isPryamo
-            ? `Схема: пассажир платит 540 рублей, водителю уходит 497, платформе 43`
+            ? `Схема: пассажир платит 540 рублей, водителю уходит 475, платформе 65`
             : `Схема: пассажир платит 540 рублей, водителю уходит 324, агрегатору и парку 216`
         }
       >
@@ -213,7 +213,7 @@ function FlowPanel({ spec, index }: { spec: FlowSpec; index: number }) {
         {isPryamo ? (
           <>
             Пассажир и водитель видят <span className="font-semibold text-zinc-300">одну и ту же
-            цену</span>. Платформа живёт на 8% и подписке Pro — и этого хватает.
+            цену</span>. Платформа живёт на 12% и подписке Pro — и этого хватает.
           </>
         ) : (
           <>

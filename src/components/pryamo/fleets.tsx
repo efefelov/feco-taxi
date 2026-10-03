@@ -25,7 +25,7 @@ import { rub, num, plural } from '@/lib/pryamo/format'
  * консервативную оценку для парка (волатильность и «услуги» включены).
  */
 const YANDEX_RATE = 0.3
-const PRYAMO_RATE = 0.08
+const PRYAMO_RATE = 0.12
 
 const BENEFITS = [
   {
@@ -41,7 +41,7 @@ const BENEFITS = [
   {
     icon: Database,
     title: 'Без обязательных «опций»',
-    desc: 'Ноль платных подписок «для попадания в ленту», ноль штрафов за отказ, комиссия фикс — 8% и видна в каждом чеке. Счёт в конце месяца не содержит сюрпризов.',
+    desc: 'Ноль платных подписок «для попадания в ленту», ноль штрафов за отказ, комиссия фикс — 12% и видна в каждом чеке. Счёт в конце месяца не содержит сюрпризов.',
   },
   {
     icon: GitBranch,
@@ -207,7 +207,7 @@ export function Fleets() {
                 </div>
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-                    комиссия ПРЯМО · 8%
+                    комиссия ПРЯМО · 12%
                   </p>
                   <p className="mt-1 text-xl font-black tabular-nums text-emerald-400">
                     {rub(calc.pryamo, { compact: true })}
@@ -249,7 +249,7 @@ export function Fleets() {
               <p className="mt-3 text-[11px] leading-relaxed text-zinc-600">
                 30% — консервативная оценка: официальная комиссия 24%, но платные «опции»,
                 подписки парка и волатильность комиссии (до 37%) съедают и её. У ПРЯМО комиссия
-                8% фикс для парков любого размера.
+                12% фикс для парков любого размера.
               </p>
             </div>
 
@@ -305,7 +305,7 @@ export function Fleets() {
                 ))}
               </ol>
               <p className="mt-4 border-t border-zinc-800 pt-3 text-[11px] leading-relaxed text-zinc-500">
-                Первый месяц для парков из первой волны — комиссия 0%. Дальше стандартные 8% фикс,
+                Первый месяц для парков из первой волны — комиссия 0%. Дальше стандартные 12% фикс,
                 без «опций» и волатильности.
               </p>
             </div>

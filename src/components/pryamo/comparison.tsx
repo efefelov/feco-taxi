@@ -13,7 +13,7 @@ interface Row {
 const ROWS: Row[] = [
   {
     feature: 'Комиссия с водителя',
-    pryamo: { text: '8% фикс или 0% с Pro (1 990 ₽/мес)', ok: true },
+    pryamo: { text: '12% фикс или 0% с Pro (2 490 ₽/мес)', ok: true },
     yandex: { text: '24%+, волатильность до 37%', ok: false },
   },
   {

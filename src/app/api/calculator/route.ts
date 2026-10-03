@@ -17,8 +17,8 @@ interface CalculatorInput {
  *  - чаевые: часть съедается экосистемой
  *
  * Модель ПРЯМО:
- *  - Pro-подписка: 1 990 ₽/мес, комиссия 0%
- *  - Без подписки: комиссия 8% фикс
+ *  - Pro-подписка: 2 490 ₽/мес, комиссия 0%
+ *  - Без подписки: комиссия 12% фикс
  *  - Чаевые 100% водителю
  */
 export async function POST(req: NextRequest) {
@@ -38,18 +38,18 @@ export async function POST(req: NextRequest) {
     const yandexMonthly = grossMonthly * (1 - yandexLoss)
 
     // ПРЯМО с подпиской Pro
-    const proPrice = 1990
+    const proPrice = 2490
     const pryamoProMonthly = grossMonthly - proPrice
 
-    // ПРЯМО без подписки (8%)
-    const pryamoPaygMonthly = grossMonthly * 0.92
+    // ПРЯМО без подписки (12%)
+    const pryamoPaygMonthly = grossMonthly * 0.88
 
     const diffMonthly = pryamoProMonthly - yandexMonthly
     const diffYearly = diffMonthly * 12
     const diffPercent = yandexMonthly > 0 ? (diffMonthly / yandexMonthly) * 100 : 0
 
-    // Точка безразличия подписки: gross где 8% == 1990 ₽
-    const proBreakEven = Math.round(proPrice / 0.08 / 100) * 100 // ~25 000 ₽/мес оборота
+    // Точка безразличия подписки: gross где 12% == 2 490 ₽
+    const proBreakEven = Math.round(proPrice / 0.12 / 100) * 100 // ~20 800 ₽/мес оборота
 
     return NextResponse.json({
       input: { hoursPerDay, daysPerMonth, avgCheck, ridesPerHour },
@@ -62,12 +62,12 @@ export async function POST(req: NextRequest) {
         lostYearly: Math.round(grossMonthly * yandexLoss * 12),
       },
       pryamoPro: {
-        commissionRate: '0% (подписка 1 990 ₽/мес)',
+        commissionRate: '0% (подписка 2 490 ₽/мес)',
         monthly: Math.round(pryamoProMonthly),
         yearly: Math.round(pryamoProMonthly * 12),
       },
       pryamoPayg: {
-        commissionRate: '8% фикс',
+        commissionRate: '12% фикс',
         monthly: Math.round(pryamoPaygMonthly),
         yearly: Math.round(pryamoPaygMonthly * 12),
       },

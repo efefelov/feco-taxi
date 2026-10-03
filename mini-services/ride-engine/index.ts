@@ -497,7 +497,7 @@ function createOrder(): void {
   const durationMin = round1(distanceKm * 2.2 + 4)
   const surge = surgeForZone(fromZone.id)
   const priceTotal = computePrice(tariff, distanceKm, durationMin, surge)
-  const driverPayout = Math.round(priceTotal * 0.92)
+  const driverPayout = Math.round(priceTotal * 0.88)
   const createdAt = new Date()
   // конкуренция за заказ: чем выше спрос в зоне подачи, тем больше водителей рядом видят ленту
   const watchingDrivers = Math.round(
@@ -712,7 +712,7 @@ function completeRide(socket: Socket, session: RideSession): void {
     session.timer = null
   }
   const price = ride.priceTotal
-  const payout = Math.round(price * 0.92)
+  const payout = Math.round(price * 0.88)
   const receipt: ReceiptDTO = {
     price,
     driverPayout: payout,
@@ -763,7 +763,7 @@ function makeLastRides(driver: DriverInfo): RideDTO[] {
       etaMin: 0,
       progress: 1,
       priceTotal: price,
-      driverPayout: Math.round(price * 0.92),
+      driverPayout: Math.round(price * 0.88),
       tariffName: t.name,
       startedAt: new Date(Date.now() - randInt(30, 360) * 60000).toISOString(),
     })
@@ -797,7 +797,7 @@ function makeWeekHistory(todayGross: number): WeekDayDTO[] {
     days.push({
       day: WEEK_DAYS[dow],
       gross,
-      payout: Math.round(gross * 0.92),
+      payout: Math.round(gross * 0.88),
       yandexPayout: Math.round(gross * 0.6),
       isToday,
     })
@@ -809,7 +809,7 @@ function makeWeekHistory(todayGross: number): WeekDayDTO[] {
 function syncWeekToday(week: WeekDayDTO[], gross: number): WeekDayDTO[] {
   return week.map((d) =>
     d.isToday
-      ? { ...d, gross, payout: Math.round(gross * 0.92), yandexPayout: Math.round(gross * 0.6) }
+      ? { ...d, gross, payout: Math.round(gross * 0.88), yandexPayout: Math.round(gross * 0.6) }
       : d,
   )
 }
@@ -863,7 +863,7 @@ io.on('connection', (socket: Socket) => {
         // старт смены: правдоподобные числа вокруг ~27 поездок / ~12 480 руб
         const ridesDone = randInt(20, 34)
         const gross = ridesDone * randInt(420, 500)
-        const payout = Math.round(gross * 0.92)
+        const payout = Math.round(gross * 0.88)
         client.earnings = {
           gross,
           payout,
@@ -956,7 +956,7 @@ io.on('connection', (socket: Socket) => {
         etaMin: randInt(3, 6),
         progress: 0,
         priceTotal,
-        driverPayout: Math.round(priceTotal * 0.92),
+        driverPayout: Math.round(priceTotal * 0.88),
         tariffName: tariff.name,
         startedAt: new Date().toISOString(),
       }

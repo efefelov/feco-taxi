@@ -77,7 +77,7 @@ export function WeekChart({ week }: { week: WeekDay[] }) {
                 color: '#e4e4e7',
               }}
               formatter={(value: number | string | Array<number | string>, name: string) => {
-                const label = name === 'pryamo' ? 'ПРЯМО (8%)' : 'Монополист (−40%)'
+                const label = name === 'pryamo' ? 'ПРЯМО (12%)' : 'Монополист (−40%)'
                 return [rub(Number(value)), label]
               }}
               labelFormatter={() => ''}

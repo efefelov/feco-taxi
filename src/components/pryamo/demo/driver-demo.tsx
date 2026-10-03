@@ -84,7 +84,7 @@ export function DriverDemo() {
       }
       toast({
         title: 'Поездка завершена',
-        description: `Выплата ${rub(r.driverPayout)} зачислена. Комиссия — только 8%.`,
+        description: `Выплата ${rub(r.driverPayout)} зачислена. Комиссия — только 12%.`,
       })
       setTimeout(() => setDriverRide(null), 6000)
     },
@@ -468,7 +468,7 @@ function OrderCard({
             {rub(order.driverPayout)}
           </p>
           <p className="mt-1 text-[11px] text-zinc-500">
-            чек {rub(order.priceTotal)} · −8%
+            чек {rub(order.priceTotal)} · −12%
           </p>
         </div>
       </div>
