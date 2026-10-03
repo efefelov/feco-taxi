@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>ПРЯМО · Demo Day · Обложка</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="global.css">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+<div class="slide">
+
+  <!-- декор: hairline-сетка -->
+  <div data-decor aria-hidden="true" class="absolute inset-0 pointer-events-none">
+    <div class="absolute top-0 bottom-0" style="left:25%; width:1px; background:var(--line); opacity:.4;"></div>
+    <div class="absolute top-0 bottom-0" style="left:50%; width:1px; background:var(--line); opacity:.4;"></div>
+    <div class="absolute top-0 bottom-0" style="left:75%; width:1px; background:var(--line); opacity:.4;"></div>
+  </div>
+
+  <!-- декор: emerald-полоса слева и уголок сверху справа -->
+  <div data-decor aria-hidden="true" class="absolute left-0 top-0 h-full" style="width:5px; background:var(--accent);"></div>
+  <div data-decor aria-hidden="true" class="absolute" style="top:0; right:0; width:132px; height:132px; border-top:2px solid var(--accent); border-right:2px solid var(--accent); opacity:.55;"></div>
+
+  <div class="relative h-full flex flex-col" style="padding:56px 64px 42px 72px;">
+
+    <span class="kicker">PRYAMO · DEMO DAY · ОКТЯБРЬ 2026</span>
+
+    <div class="flex-1 flex items-center" style="gap:56px;">
+      <!-- wordmark + слоган -->
+      <div class="flex-1" style="min-width:0;">
+        <h1 style="font-family:var(--font-heading); font-weight:900; font-size:144px; line-height:1; letter-spacing:-.015em; color:var(--primary); white-space:nowrap;">ПР<span style="color:var(--accent);">Я</span>МО</h1>
+        <div class="hairline" style="width:440px; margin:30px 0 26px;"></div>
+        <h2 style="font-family:var(--font-heading); font-weight:700; font-size:29px; line-height:1.3; color:var(--primary);">Водителю — <span class="num" style="color:var(--accent);">88</span> копеек с рубля</h2>
+        <p style="margin-top:14px; font-size:17px; line-height:1.55; color:var(--secondary); max-width:560px;">Альтернатива Яндекс Такси, построенная на экономике водителя</p>
+      </div>
+
+      <!-- карта-хук -->
+      <div style="width:344px; flex-shrink:0;">
+        <div class="card-amber" style="padding:28px 28px 26px;">
+          <i class="material-icons" aria-hidden="true" style="color:var(--amber); font-size:26px;">payments</i>
+          <div class="num" style="margin-top:12px; font-size:84px; font-weight:800; line-height:1; letter-spacing:-.02em; color:var(--amber);">60,4%</div>
+          <div style="height:1px; background:rgba(245,158,11,.3); margin:18px 0 12px;"></div>
+          <p style="font-size:14.5px; line-height:1.5; color:var(--primary);">столько забирает монополист со смены водителя</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- чипы + футер-строка -->
+    <div>
+      <div class="flex items-center flex-wrap" style="gap:12px;">
+        <span class="chip"><span style="width:7px; height:7px; border-radius:999px; background:var(--accent); flex-shrink:0;"></span><span><span class="num" style="font-weight:700; color:var(--primary);">12%</span> фикс комиссии</span></span>
+        <span class="chip"><span style="width:7px; height:7px; border-radius:999px; background:var(--accent); flex-shrink:0;"></span><span>Pro <span class="num" style="font-weight:700; color:var(--primary);">2 490 ₽/мес</span> · <span class="num" style="font-weight:700; color:var(--primary);">0%</span></span></span>
+        <span class="chip"><span style="width:7px; height:7px; border-radius:999px; background:var(--accent); flex-shrink:0;"></span><span>налог с чистой выплаты</span></span>
+      </div>
+      <div class="hairline" style="margin:18px 0 12px;"></div>
+      <p style="font-size:var(--fs-micro); letter-spacing:.05em; color:var(--secondary);">Основатель — действующий водитель такси · цифры из реальной смены 01→02.10.2026</p>
+    </div>
+
+  </div>
+</div>
+
+<aside data-notes class="hidden">
+  <ul>
+    <li>Открытие: «Я основатель — и я работаю водителем такси. Всё, что вы увидите, посчитано на моём собственном чеке».</li>
+    <li>Рамка питча: монополист забирает 60,4% смены — мы возвращаем водителю 88 копеек с рубля.</li>
+    <li>Три опоры оффера: 12% фикс комиссии · Pro 2 490 ₽/мес с 0% · налог с чистой выплаты.</li>
+    <li>Не задерживаться: 20–30 секунд на обложку, дальше — смена под микроскопом.</li>
+  </ul>
+</aside>
+</body>
+</html>

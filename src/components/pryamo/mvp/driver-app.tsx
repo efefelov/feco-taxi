@@ -27,13 +27,21 @@ import {
   Banknote,
   Flame,
   Handshake,
+  HardDrive,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { toast } from '@/hooks/use-toast'
 import { useMvpDriver } from '@/lib/pryamo/mvp-socket'
 import { rub, plural } from '@/lib/pryamo/format'
-import type { OrderDTO, RideDTO } from '@/lib/pryamo/types'
+import {
+  loadDriverEarnings,
+  localDay,
+  saveDriverEarnings,
+  type StoredDriverEarnings,
+} from '@/lib/pryamo/mvp-storage'
+import type { EarningsToday, OrderDTO, RideDTO, WeekDay } from '@/lib/pryamo/types'
+import { CityMap } from '../demo/city-map'
 
 // recharts — тяжёлый, грузим отдельным чанком
 const WeekChart = dynamic(() => import('../demo/week-chart').then((m) => m.WeekChart), {
@@ -56,6 +64,14 @@ export function DriverApp({ onOpenPassenger }: { onOpenPassenger?: () => void })
   const [driverRide, setDriverRide] = useState<RideDTO | null>(null)
   const [isPro, setIsPro] = useState(false)
   const [seen] = useState(() => new Set<string>())
+
+  // Персистентность заработка: база — то, что уже заработано СЕГОДНЯ на этом
+  // устройстве; новая сессия движка даёт случайные «стартовые» числа, поэтому
+  // при наличии базы показываем базу + дельту завершённых поездок (merge).
+  // Оверлей рендерится только на клиенте (при SSR и гидратации закрыт) —
+  // ленивый инициализатор читает localStorage один раз при монтировании.
+  const [base] = useState<StoredDriverEarnings | null>(() => loadDriverEarnings())
+  const [sessionDelta, setSessionDelta] = useState({ gross: 0, payout: 0, commission: 0, rides: 0 })
 
   // Тикер для обратного отсчёта заказов
   const [, forceTick] = useState(0)
@@ -95,6 +111,12 @@ export function DriverApp({ onOpenPassenger }: { onOpenPassenger?: () => void })
     },
     onCompleted: (r) => {
       setDriverRide(r)
+      setSessionDelta((d) => ({
+        gross: d.gross + r.priceTotal,
+        payout: d.payout + r.driverPayout,
+        commission: d.commission + (r.priceTotal - r.driverPayout),
+        rides: d.rides + 1,
+      }))
       toast({
         title: 'Поездка завершена',
         description: `Выплата ${rub(r.driverPayout)} зачислена. Комиссия — только 12%.`,
@@ -118,9 +140,59 @@ export function DriverApp({ onOpenPassenger }: { onOpenPassenger?: () => void })
     [orders]
   )
 
+  // Заработок к показу: база устройства + дельта этой сессии; без базы — живые
+  // числа движка (первый заход: случайная смена + приросты за завершённые поездки)
+  const earningsView = useMemo<EarningsToday | null>(() => {
+    if (base) {
+      return {
+        gross: base.gross + sessionDelta.gross,
+        payout: base.payout + sessionDelta.payout,
+        commission: base.commission + sessionDelta.commission,
+        rides: base.rides + sessionDelta.rides,
+        hoursOnline: Math.round((base.hoursOnline + sessionDelta.rides * 0.1) * 10) / 10,
+      }
+    }
+    return earnings
+  }, [base, sessionDelta, earnings])
+
+  // Недельный график: прошлые дни — из сохранения (стабильны между сессиями),
+  // сегодняшняя колонка синхронизируется с показанным заработком
+  const weekView = useMemo<WeekDay[]>(() => {
+    const source = base && base.week.length > 0 ? base.week : week
+    if (source.length === 0) return []
+    const todayGross = earningsView?.gross ?? 0
+    return source.map((d) =>
+      d.isToday
+        ? {
+            ...d,
+            gross: todayGross,
+            payout: Math.round(todayGross * 0.88),
+            yandexPayout: Math.round(todayGross * 0.6),
+          }
+        : d
+    )
+  }, [base, week, earningsView])
+
+  // Запись — при каждом изменении показанного заработка (внешняя система)
+  useEffect(() => {
+    if (!earningsView) return
+    saveDriverEarnings({
+      version: 1,
+      day: localDay(),
+      gross: earningsView.gross,
+      payout: earningsView.payout,
+      commission: earningsView.commission,
+      rides: earningsView.rides,
+      hoursOnline: earningsView.hoursOnline,
+      week: weekView,
+    })
+  }, [earningsView, weekView])
+
   // Показатель «выплата»: с Pro комиссия 0 (образовательный переключатель)
-  const payoutNow = earnings ? (isPro ? earnings.gross : earnings.payout) : 0
-  const proDelta = earnings ? earnings.commission - (earnings.gross > 20750 ? 2490 : 0) : 0
+  const payoutNow = earningsView ? (isPro ? earningsView.gross : earningsView.payout) : 0
+  const proDelta = earningsView
+    ? earningsView.commission - (earningsView.gross > 20750 ? 2490 : 0)
+    : 0
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-zinc-950">
@@ -253,6 +325,14 @@ export function DriverApp({ onOpenPassenger }: { onOpenPassenger?: () => void })
                       </div>
                     </div>
 
+                    {/* Мини-карта маршрута — та же схема города, что у пассажира */}
+                    <CityMap
+                      variant="ride"
+                      ride={driverRide}
+                      searching={false}
+                      className="mx-auto mt-3 aspect-[5/3] w-full max-w-[320px] overflow-hidden rounded-xl border border-zinc-800/80"
+                    />
+
                     <div className="mt-3 flex items-center gap-3 text-[10px] text-zinc-500">
                       <span className="flex items-center gap-1">
                         <RouteIcon className="h-3 w-3" aria-hidden />
@@ -379,7 +459,7 @@ export function DriverApp({ onOpenPassenger }: { onOpenPassenger?: () => void })
           <div className="space-y-3 p-4">
             <h2 className="text-base font-black text-white">Заработок</h2>
 
-            {earnings ? (
+            {earningsView ? (
               <>
                 <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-zinc-900 to-zinc-950 p-4">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
@@ -387,7 +467,7 @@ export function DriverApp({ onOpenPassenger }: { onOpenPassenger?: () => void })
                   </p>
                   <div className="mt-1 flex items-baseline gap-2">
                     <p className="text-3xl font-black tabular-nums text-white">
-                      {rub(isPro ? earnings.gross : earnings.payout)}
+                      {rub(isPro ? earningsView.gross : earningsView.payout)}
                     </p>
                     {isPro && (
                       <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold text-emerald-300">
@@ -398,13 +478,13 @@ export function DriverApp({ onOpenPassenger }: { onOpenPassenger?: () => void })
                   <div className="mt-3 grid grid-cols-2 gap-2 text-center">
                     <div className="rounded-xl bg-zinc-950/60 p-2.5">
                       <p className="text-sm font-black tabular-nums text-zinc-200">
-                        {rub(earnings.gross)}
+                        {rub(earningsView.gross)}
                       </p>
                       <p className="text-[9px] uppercase tracking-wide text-zinc-500">оборот</p>
                     </div>
                     <div className="rounded-xl bg-zinc-950/60 p-2.5">
                       <p className="text-sm font-black tabular-nums text-zinc-200">
-                        {rub(earnings.commission)}
+                        {rub(earningsView.commission)}
                       </p>
                       <p className="text-[9px] uppercase tracking-wide text-zinc-500">
                         комиссия 12% {isPro ? '(вернётся с Pro)' : ''}
@@ -412,27 +492,35 @@ export function DriverApp({ onOpenPassenger }: { onOpenPassenger?: () => void })
                     </div>
                     <div className="rounded-xl bg-zinc-950/60 p-2.5">
                       <p className="text-sm font-black tabular-nums text-zinc-200">
-                        {earnings.rides}
+                        {earningsView.rides}
                       </p>
                       <p className="text-[9px] uppercase tracking-wide text-zinc-500">
-                        {plural(earnings.rides, 'поездка', 'поездки', 'поездок')}
+                        {plural(earningsView.rides, 'поездка', 'поездки', 'поездок')}
                       </p>
                     </div>
                     <div className="rounded-xl bg-zinc-950/60 p-2.5">
                       <p className="text-sm font-black tabular-nums text-zinc-200">
-                        {earnings.hoursOnline.toString().replace('.', ',')} ч
+                        {earningsView.hoursOnline.toString().replace('.', ',')} ч
                       </p>
                       <p className="text-[9px] uppercase tracking-wide text-zinc-500">на линии</p>
                     </div>
                   </div>
                   <p className="mt-3 flex items-center gap-1.5 border-t border-emerald-500/15 pt-2.5 text-[10px] leading-relaxed text-emerald-300/80">
                     <TrendingUp className="h-3 w-3 shrink-0" aria-hidden />
-                    У монополиста этот же оборот оставил бы вам {rub(Math.round(earnings.gross * 0.6))} —
-                    на {rub(Math.round(earnings.gross * 0.28))} меньше.
+                    У монополиста этот же оборот оставил бы вам{' '}
+                    {rub(Math.round(earningsView.gross * 0.6))} — на{' '}
+                    {rub(Math.round(earningsView.gross * 0.28))} меньше.
                   </p>
                 </div>
 
-                {week.length > 0 && <WeekChart week={week} />}
+                {base && (
+                  <p className="flex items-center gap-1.5 px-0.5 text-[10px] text-zinc-600">
+                    <HardDrive className="h-3 w-3 shrink-0" aria-hidden />
+                    смена восстановлена с этого устройства — новые поездки плюсуются сверху
+                  </p>
+                )}
+
+                {weekView.length > 0 && <WeekChart week={weekView} />}
 
                 {lastRides.length > 0 && (
                   <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
@@ -531,7 +619,7 @@ export function DriverApp({ onOpenPassenger }: { onOpenPassenger?: () => void })
                   />
                 </button>
               </div>
-              {earnings && (
+              {earningsView && (
                 <div
                   className={cn(
                     'mt-3 rounded-xl border p-3 text-[11px] leading-relaxed',
@@ -543,8 +631,8 @@ export function DriverApp({ onOpenPassenger }: { onOpenPassenger?: () => void })
                   {isPro ? (
                     <>
                       С Pro ваш доход сегодня был бы{' '}
-                      <span className="font-black text-emerald-300">{rub(earnings.gross)}</span> — вся
-                      выручка без комиссии. Подписка окупается от ~21 000 ₽ оборота в месяц.
+                      <span className="font-black text-emerald-300">{rub(earningsView.gross)}</span> —
+                      вся выручка без комиссии. Подписка окупается от ~21 000 ₽ оборота в месяц.
                     </>
                   ) : (
                     <>
@@ -552,8 +640,8 @@ export function DriverApp({ onOpenPassenger }: { onOpenPassenger?: () => void })
                       <span className="font-bold text-emerald-300">
                         {rub(Math.max(0, proDelta))}
                       </span>{' '}
-                      больше за смену (комиссия {rub(earnings.commission)} минус доля подписки ~83 ₽).
-                      Окупается от ~21 000 ₽ оборота в месяц.
+                      больше за смену (комиссия {rub(earningsView.commission)} минус доля подписки ~83
+                      ₽). Окупается от ~21 000 ₽ оборота в месяц.
                     </>
                   )}
                 </div>

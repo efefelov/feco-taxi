@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>ПРЯМО · 07 · Рынок</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="global.css">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+  .h1{font-family:var(--font-heading);font-weight:900;font-size:44px;line-height:1.15;letter-spacing:-.01em;color:var(--primary);}
+  .statnum{font-weight:800;line-height:1;letter-spacing:-.03em;}
+</style>
+</head>
+<body>
+<div class="slide">
+  <!-- Призрачный рубль: декор -->
+  <div data-decor aria-hidden="true" style="position:absolute;top:0;right:0;font-family:var(--font-num);font-weight:800;font-size:330px;line-height:.85;color:rgba(245,158,11,.05);user-select:none;">₽</div>
+
+  <div style="position:relative;height:100%;display:flex;flex-direction:column;justify-content:space-between;padding:56px 60px 44px;">
+
+    <!-- Шапка + гигантская цифра -->
+    <div>
+      <div class="kicker">РЫНОК</div>
+      <h1 class="h1" style="margin-top:10px;">Каждый день монополия<br>изымает до 1,7 млрд ₽</h1>
+
+      <div style="display:flex;align-items:baseline;gap:16px;margin-top:18px;">
+        <span class="num attn statnum" style="font-size:132px;">~1,7</span>
+        <span class="num attn" style="font-size:42px;font-weight:700;letter-spacing:-.02em;">млрд ₽/день</span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;margin-top:16px;font-size:15px;color:var(--secondary);">
+        <span class="num attn" style="font-size:17px;font-weight:700;">≈</span>
+        <span><span class="num" style="color:var(--primary);font-weight:700;font-size:16.5px;">9,3 млн</span> поездок/день</span>
+        <span class="num" style="color:var(--secondary);">×</span>
+        <span>средний чек <span class="num" style="color:var(--primary);font-weight:700;font-size:16.5px;">~450 ₽</span></span>
+        <span class="num" style="color:var(--secondary);">×</span>
+        <span><span class="num attn" style="font-weight:700;font-size:16.5px;">~40%</span> совокупных потерь с водителя</span>
+      </div>
+    </div>
+
+    <!-- Ряд крупных статов -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+      <div class="card" style="padding:20px 22px;display:flex;flex-direction:column;justify-content:center;gap:9px;">
+        <div class="num statnum" style="font-size:37px;color:var(--primary);">3,4 млрд</div>
+        <div style="font-size:14px;color:var(--secondary);">поездок/год в РФ</div>
+      </div>
+      <div class="card" style="padding:20px 22px;display:flex;flex-direction:column;justify-content:center;gap:9px;">
+        <div class="num statnum" style="font-size:37px;color:var(--primary);">~75%</div>
+        <div style="font-size:14px;color:var(--secondary);">онлайн-заказа — у одного игрока</div>
+      </div>
+      <div class="card" style="padding:20px 22px;display:flex;flex-direction:column;justify-content:center;gap:7px;">
+        <div style="display:flex;align-items:baseline;gap:9px;">
+          <span class="num statnum" style="font-size:37px;color:var(--primary);">1%</span>
+          <span style="font-size:14px;color:var(--secondary);">рынка</span>
+        </div>
+        <div style="font-size:14px;color:var(--secondary);"><span class="num" style="color:var(--accent);font-weight:800;font-size:21px;">≈ 1,8 млрд ₽</span> выручки в год</div>
+        <div style="font-size:11.5px;color:var(--secondary);">(внутренняя оценка)</div>
+      </div>
+    </div>
+
+    <!-- Вывод + сноска -->
+    <div>
+      <div style="display:flex;gap:16px;align-items:stretch;">
+        <div style="width:4px;background:var(--accent);border-radius:2px;" aria-hidden="true"></div>
+        <h3 style="font-family:var(--font-heading);font-weight:700;font-size:20px;line-height:1.4;color:var(--accent);max-width:1030px;">Мы не обязаны победить монополию, чтобы построить большой бизнес — достаточно <span class="num" style="letter-spacing:-.02em;">3–5%</span> в городах присутствия</h3>
+      </div>
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:11.5px;color:var(--secondary);">Все цифры — консервативные оценки концепта, а не обещания инвесторам</div>
+    </div>
+
+  </div>
+</div>
+<aside data-notes class="hidden">
+  <ul>
+    <li>Держать паузу после «~1,7 млрд ₽/день» — дать цифре прозвучать.</li>
+    <li>Расшифровка на словах: 9,3 млн поездок/день × средний чек ~450 ₽ × ~40% совокупных потерь с водителя.</li>
+    <li>Рынок — 3,4 млрд поездок/год в РФ; ~75% онлайн-заказа у одного игрока — это не лояльность, а отсутствие альтернативы.</li>
+    <li>1% рынка ≈ 1,8 млрд ₽ выручки в год (внутренняя оценка) — даже малая доля даёт большой бизнес.</li>
+    <li>Вывод: побеждать монополию не обязательно — достаточно 3–5% в городах присутствия; все цифры — консервативные оценки концепта.</li>
+  </ul>
+</aside>
+</body>
+</html>

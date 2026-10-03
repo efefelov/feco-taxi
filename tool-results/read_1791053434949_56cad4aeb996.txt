@@ -1,0 +1,721 @@
+     1→'use client'
+     2→
+     3→import { useEffect, useMemo, useState } from 'react'
+     4→import { AnimatePresence, motion } from 'framer-motion'
+     5→import dynamic from 'next/dynamic'
+     6→import {
+     7→  CarFront,
+     8→  Wallet,
+     9→  User,
+    10→  Zap,
+    11→  Power,
+    12→  MapPin,
+    13→  Navigation,
+    14→  Route as RouteIcon,
+    15→  Clock,
+    16→  Eye,
+    17→  Users,
+    18→  Check,
+    19→  X,
+    20→  TrendingUp,
+    21→  TrendingDown,
+    22→  Star,
+    23→  ShieldCheck,
+    24→  BadgePercent,
+    25→  Timer,
+    26→  Link2,
+    27→  Banknote,
+    28→  Flame,
+    29→  Handshake,
+    30→} from 'lucide-react'
+    31→import { Button } from '@/components/ui/button'
+    32→import { cn } from '@/lib/utils'
+    33→import { toast } from '@/hooks/use-toast'
+    34→import { useMvpDriver } from '@/lib/pryamo/mvp-socket'
+    35→import { rub, plural } from '@/lib/pryamo/format'
+    36→import type { OrderDTO, RideDTO } from '@/lib/pryamo/types'
+    37→
+    38→// recharts — тяжёлый, грузим отдельным чанком
+    39→const WeekChart = dynamic(() => import('../demo/week-chart').then((m) => m.WeekChart), {
+    40→  ssr: false,
+    41→  loading: () => (
+    42→    <div className="mt-3 flex h-40 items-center justify-center rounded-xl border border-zinc-800 bg-zinc-950/50 text-[10px] text-zinc-600">
+    43→      график недели загружается…
+    44→    </div>
+    45→  ),
+    46→})
+    47→
+    48→function timeLeft(expiresAt: string): number {
+    49→  return Math.max(0, Math.round((+new Date(expiresAt) - Date.now()) / 1000))
+    50→}
+    51→
+    52→type Tab = 'shift' | 'earnings' | 'profile'
+    53→
+    54→export function DriverApp({ onOpenPassenger }: { onOpenPassenger?: () => void }) {
+    55→  const [tab, setTab] = useState<Tab>('shift')
+    56→  const [driverRide, setDriverRide] = useState<RideDTO | null>(null)
+    57→  const [isPro, setIsPro] = useState(false)
+    58→  const [seen] = useState(() => new Set<string>())
+    59→
+    60→  // Тикер для обратного отсчёта заказов
+    61→  const [, forceTick] = useState(0)
+    62→  useEffect(() => {
+    63→    const t = setInterval(() => forceTick((v) => v + 1), 1000)
+    64→    return () => clearInterval(t)
+    65→  }, [])
+    66→
+    67→  const {
+    68→    connected,
+    69→    online,
+    70→    orders,
+    71→    identity,
+    72→    earnings,
+    73→    week,
+    74→    lastRides,
+    75→    goOnline,
+    76→    goOffline,
+    77→    accept,
+    78→    decline,
+    79→    advance,
+    80→  } = useMvpDriver({
+    81→    onOrderNew: (o) => {
+    82→      if (!seen.has(o.id)) {
+    83→        seen.add(o.id)
+    84→        if (online) {
+    85→          toast({
+    86→            title: `Новый заказ: ${o.from.label} → ${o.to.label}`,
+    87→            description: `${o.distanceKm} км · выплата ${rub(o.driverPayout)} · видят ${o.watchingDrivers} водителей`,
+    88→          })
+    89→        }
+    90→      }
+    91→    },
+    92→    onRideState: (r) => {
+    93→      setDriverRide(r)
+    94→      if (r.status !== 'completed' && r.status !== 'searching') setTab('shift')
+    95→    },
+    96→    onCompleted: (r) => {
+    97→      setDriverRide(r)
+    98→      toast({
+    99→        title: 'Поездка завершена',
+   100→        description: `Выплата ${rub(r.driverPayout)} зачислена. Комиссия — только 12%.`,
+   101→      })
+   102→      setTimeout(() => setDriverRide((cur) => (cur?.id === r.id ? null : cur)), 5000)
+   103→    },
+   104→    onAcceptFailed: (id, reason) => {
+   105→      toast({
+   106→        title: reason === 'taken' ? 'Успели раньше вас' : 'Заказ недоступен',
+   107→        description:
+   108→          reason === 'busy'
+   109→            ? 'Сначала завершите текущую поездку — верёвка: один активный заказ.'
+   110→            : 'У нас это не штраф и не понижение приоритета. Просто не повезло.',
+   111→      })
+   112→    },
+   113→  })
+   114→
+   115→  const inRide = driverRide !== null && driverRide.status !== 'completed'
+   116→  const sortedOrders = useMemo(
+   117→    () => [...orders].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)),
+   118→    [orders]
+   119→  )
+   120→
+   121→  // Показатель «выплата»: с Pro комиссия 0 (образовательный переключатель)
+   122→  const payoutNow = earnings ? (isPro ? earnings.gross : earnings.payout) : 0
+   123→  const proDelta = earnings ? earnings.commission - (earnings.gross > 20750 ? 2490 : 0) : 0
+   124→
+   125→  return (
+   126→    <div className="flex h-full min-h-0 flex-col bg-zinc-950">
+   127→      {/* ===== Шапка ===== */}
+   128→      <header className="flex items-center justify-between border-b border-zinc-800/70 px-4 py-3">
+   129→        <div className="flex items-center gap-2.5">
+   130→          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-400 text-zinc-950">
+   131→            <CarFront className="h-4 w-4" strokeWidth={2.4} />
+   132→          </span>
+   133→          <div className="leading-none">
+   134→            <p className="text-sm font-black tracking-tight text-white">ПРЯМО</p>
+   135→            <p className="text-[9px] font-medium uppercase tracking-[0.18em] text-amber-400">
+   136→              приложение водителя
+   137→            </p>
+   138→          </div>
+   139→        </div>
+   140→        <div className="flex items-center gap-2">
+   141→          {identity && (
+   142→            <span className="hidden items-center gap-1 rounded-full border border-zinc-700 bg-zinc-900 px-2.5 py-1 text-[10px] font-semibold text-zinc-300 sm:flex">
+   143→              <Star className="h-3 w-3 fill-amber-400 text-amber-400" aria-hidden />
+   144→              {identity.rating.toFixed(2)}
+   145→            </span>
+   146→          )}
+   147→          <span
+   148→            className={cn(
+   149→              'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold',
+   150→              online
+   151→                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+   152→                : 'border-zinc-700 bg-zinc-900 text-zinc-400'
+   153→            )}
+   154→            role="status"
+   155→          >
+   156→            <span
+   157→              className={cn(
+   158→                'h-1.5 w-1.5 rounded-full',
+   159→                online ? 'animate-pulse bg-emerald-400' : 'bg-zinc-500'
+   160→              )}
+   161→            />
+   162→            {online ? 'на линии' : 'офлайн'}
+   163→          </span>
+   164→        </div>
+   165→      </header>
+   166→
+   167→      {/* ===== Контент ===== */}
+   168→      <div className="pryamo-scroll min-h-0 flex-1 overflow-y-auto">
+   169→        {tab === 'shift' && (
+   170→          <div className="space-y-3 p-4">
+   171→            {/* Тумблер смены */}
+   172→            <button
+   173→              onClick={() => (online ? goOffline() : goOnline())}
+   174→              className={cn(
+   175→                'flex w-full items-center justify-between rounded-2xl border p-4 transition-all',
+   176→                online
+   177→                  ? 'border-emerald-500/40 bg-gradient-to-r from-emerald-500/15 to-zinc-900'
+   178→                  : 'border-zinc-800 bg-zinc-900/60 hover:border-zinc-700'
+   179→              )}
+   180→              aria-pressed={online}
+   181→            >
+   182→              <span className="flex items-center gap-3">
+   183→                <span
+   184→                  className={cn(
+   185→                    'flex h-10 w-10 items-center justify-center rounded-xl ring-1',
+   186→                    online
+   187→                      ? 'bg-emerald-500/20 text-emerald-400 ring-emerald-500/30'
+   188→                      : 'bg-zinc-800 text-zinc-500 ring-zinc-700'
+   189→                  )}
+   190→                >
+   191→                  <Power className="h-5 w-5" aria-hidden />
+   192→                </span>
+   193→                <span className="text-left">
+   194→                  <span className="block text-sm font-black text-white">
+   195→                    {online ? 'Вы на линии' : 'Начать смену'}
+   196→                  </span>
+   197→                  <span className="block text-[11px] text-zinc-500">
+   198→                    {online
+   199→                      ? `заказы летят · сейчас в ленте ${orders.length}`
+   200→                      : 'выйдите на линию — и лента оживёт'}
+   201→                  </span>
+   202→                </span>
+   203→              </span>
+   204→              <span
+   205→                className={cn(
+   206→                  'relative h-7 w-12 rounded-full transition-colors',
+   207→                  online ? 'bg-emerald-500' : 'bg-zinc-700'
+   208→                )}
+   209→                aria-hidden
+   210→              >
+   211→                <span
+   212→                  className={cn(
+   213→                    'absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all',
+   214→                    online ? 'left-6' : 'left-1'
+   215→                  )}
+   216→                />
+   217→              </span>
+   218→            </button>
+   219→
+   220→            {/* Активная поездка */}
+   221→            <AnimatePresence>
+   222→              {inRide && driverRide && (
+   223→                <motion.div
+   224→                  key="active-ride"
+   225→                  initial={{ opacity: 0, y: -8 }}
+   226→                  animate={{ opacity: 1, y: 0 }}
+   227→                  exit={{ opacity: 0, y: -8 }}
+   228→                  className="overflow-hidden rounded-2xl border border-amber-400/40 bg-gradient-to-b from-amber-400/10 to-zinc-900"
+   229→                >
+   230→                  <div className="p-4">
+   231→                    <div className="flex items-center justify-between gap-3">
+   232→                      <div className="flex items-center gap-2">
+   233→                        <Navigation className="h-4.5 w-4.5 text-amber-400" aria-hidden />
+   234→                        <p className="text-sm font-black text-white">
+   235→                          {driverRide.status === 'arriving'
+   236→                            ? 'Едете к пассажиру'
+   237→                            : 'Пассажир в салоне'}
+   238→                        </p>
+   239→                      </div>
+   240→                      <span className="rounded-lg bg-amber-400/15 px-2.5 py-1 text-sm font-black tabular-nums text-amber-300">
+   241→                        +{rub(driverRide.driverPayout)}
+   242→                      </span>
+   243→                    </div>
+   244→
+   245→                    <div className="mt-3 space-y-2">
+   246→                      <div className="flex items-start gap-2.5">
+   247→                        <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" aria-hidden />
+   248→                        <p className="text-xs font-semibold text-zinc-200">{driverRide.from.label}</p>
+   249→                      </div>
+   250→                      <div className="flex items-start gap-2.5">
+   251→                        <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden />
+   252→                        <p className="text-xs font-semibold text-zinc-200">{driverRide.to.label}</p>
+   253→                      </div>
+   254→                    </div>
+   255→
+   256→                    <div className="mt-3 flex items-center gap-3 text-[10px] text-zinc-500">
+   257→                      <span className="flex items-center gap-1">
+   258→                        <RouteIcon className="h-3 w-3" aria-hidden />
+   259→                        {driverRide.distanceKm} км
+   260→                      </span>
+   261→                      <span className="flex items-center gap-1">
+   262→                        <Clock className="h-3 w-3" aria-hidden />
+   263→                        ~{driverRide.etaMin} мин
+   264→                      </span>
+   265→                      <span className="flex items-center gap-1">
+   266→                        <Banknote className="h-3 w-3" aria-hidden />
+   267→                        чек {rub(driverRide.priceTotal)} · ваши 88%
+   268→                      </span>
+   269→                    </div>
+   270→
+   271→                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-zinc-800">
+   272→                      <div
+   273→                        className="h-full rounded-full bg-gradient-to-r from-amber-400 to-emerald-500 transition-all duration-1000"
+   274→                        style={{ width: `${Math.round((driverRide.progress ?? 0) * 100)}%` }}
+   275→                      />
+   276→                    </div>
+   277→
+   278→                    {/* Управление этапами — верёвка ТОС */}
+   279→                    {driverRide.status === 'arriving' ? (
+   280→                      <Button
+   281→                        onClick={() => advance()}
+   282→                        className="mt-3.5 h-11 w-full bg-emerald-500 text-xs font-bold text-zinc-950 hover:bg-emerald-400"
+   283→                      >
+   284→                        <Check className="mr-1.5 h-4 w-4" aria-hidden />
+   285→                        Пассажир сел — в путь
+   286→                      </Button>
+   287→                    ) : (
+   288→                      <Button
+   289→                        onClick={() => advance()}
+   290→                        className="mt-3.5 h-11 w-full bg-amber-400 text-xs font-bold text-zinc-950 hover:bg-amber-300"
+   291→                      >
+   292→                        <Check className="mr-1.5 h-4 w-4" aria-hidden />
+   293→                        Завершить поездку
+   294→                      </Button>
+   295→                    )}
+   296→                    <p className="mt-2 flex items-center justify-center gap-1.5 text-[10px] text-zinc-600">
+   297→                      <Link2 className="h-3 w-3 text-amber-500/70" aria-hidden />
+   298→                      верёвка: новый заказ предложат после завершения этого
+   299→                    </p>
+   300→                  </div>
+   301→                </motion.div>
+   302→              )}
+   303→            </AnimatePresence>
+   304→
+   305→            {/* Лента заказов */}
+   306→            {!online ? (
+   307→              <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-zinc-800 p-8 text-center">
+   308→                <Power className="h-8 w-8 text-zinc-700" aria-hidden />
+   309→                <p className="text-sm font-semibold text-zinc-400">Смена не начата</p>
+   310→                <p className="text-xs text-zinc-600">
+   311→                  Выйдите на линию — лента заказов оживёт. Комиссия та же: 12%.
+   312→                </p>
+   313→              </div>
+   314→            ) : inRide ? (
+   315→              <div className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
+   316→                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-800 text-amber-400 ring-1 ring-zinc-700">
+   317→                  <Link2 className="h-4 w-4" aria-hidden />
+   318→                </span>
+   319→                <div className="min-w-0">
+   320→                  <p className="text-xs font-bold text-white">Лента приторможена — вы в поездке</p>
+   321→                  <p className="text-[11px] leading-snug text-zinc-500">
+   322→                    Барабан-буфер-верёвка: один активный заказ, следующие предложат после завершения
+   323→                  </p>
+   324→                </div>
+   325→                <span className="ml-auto shrink-0 rounded-lg bg-zinc-800 px-2.5 py-1 text-xs font-black tabular-nums text-zinc-400">
+   326→                  {orders.length}
+   327→                </span>
+   328→              </div>
+   329→            ) : (
+   330→              <div className="space-y-2.5">
+   331→                <div className="flex items-center justify-between px-0.5">
+   332→                  <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+   333→                    <Flame className="h-3.5 w-3.5 text-amber-400" aria-hidden />
+   334→                    Лента заказов · аукцион
+   335→                  </p>
+   336→                  <p className="flex items-center gap-1 text-[10px] font-semibold text-zinc-500">
+   337→                    <ShieldCheck className="h-3 w-3 text-emerald-500/70" aria-hidden />
+   338→                    «Мимо» — без штрафа
+   339→                  </p>
+   340→                </div>
+   341→
+   342→                {sortedOrders.length === 0 && (
+   343→                  <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-zinc-800 p-8 text-center">
+   344→                    <Timer className="h-8 w-8 text-zinc-700" aria-hidden />
+   345→                    <p className="text-sm font-semibold text-zinc-400">Лента пуста на секунду</p>
+   346→                    <p className="text-xs text-zinc-600">движок создаёт заказы каждые 4–9 секунд</p>
+   347→                  </div>
+   348→                )}
+   349→
+   350→                <AnimatePresence initial={false}>
+   351→                  {sortedOrders.map((o) => (
+   352→                    <OrderCard key={o.id} order={o} onAccept={accept} onDecline={decline} />
+   353→                  ))}
+   354→                </AnimatePresence>
+   355→              </div>
+   356→            )}
+   357→
+   358→            {/* Подсказка: ваш заказ из пассажирского приложения */}
+   359→            <button
+   360→              onClick={() => onOpenPassenger?.()}
+   361→              className="flex w-full items-center gap-3 rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-3.5 text-left transition-colors hover:border-emerald-500/40"
+   362→            >
+   363→              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/25">
+   364→                <Users className="h-4.5 w-4.5" aria-hidden />
+   365→              </span>
+   366→              <span className="min-w-0">
+   367→                <span className="block text-xs font-bold text-white">
+   368→                  Здесь появятся и ваши заказы
+   369→                </span>
+   370→                <span className="block text-[11px] leading-snug text-zinc-500">
+   371→                  Закажите поездку в роли пассажира — она придёт в эту ленту, и вы примете её сами
+   372→                </span>
+   373→              </span>
+   374→            </button>
+   375→          </div>
+   376→        )}
+   377→
+   378→        {tab === 'earnings' && (
+   379→          <div className="space-y-3 p-4">
+   380→            <h2 className="text-base font-black text-white">Заработок</h2>
+   381→
+   382→            {earnings ? (
+   383→              <>
+   384→                <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 via-zinc-900 to-zinc-950 p-4">
+   385→                  <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+   386→                    Чистыми сегодня
+   387→                  </p>
+   388→                  <div className="mt-1 flex items-baseline gap-2">
+   389→                    <p className="text-3xl font-black tabular-nums text-white">
+   390→                      {rub(isPro ? earnings.gross : earnings.payout)}
+   391→                    </p>
+   392→                    {isPro && (
+   393→                      <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold text-emerald-300">
+   394→                        Pro: 0% комиссии
+   395→                      </span>
+   396→                    )}
+   397→                  </div>
+   398→                  <div className="mt-3 grid grid-cols-2 gap-2 text-center">
+   399→                    <div className="rounded-xl bg-zinc-950/60 p-2.5">
+   400→                      <p className="text-sm font-black tabular-nums text-zinc-200">
+   401→                        {rub(earnings.gross)}
+   402→                      </p>
+   403→                      <p className="text-[9px] uppercase tracking-wide text-zinc-500">оборот</p>
+   404→                    </div>
+   405→                    <div className="rounded-xl bg-zinc-950/60 p-2.5">
+   406→                      <p className="text-sm font-black tabular-nums text-zinc-200">
+   407→                        {rub(earnings.commission)}
+   408→                      </p>
+   409→                      <p className="text-[9px] uppercase tracking-wide text-zinc-500">
+   410→                        комиссия 12% {isPro ? '(вернётся с Pro)' : ''}
+   411→                      </p>
+   412→                    </div>
+   413→                    <div className="rounded-xl bg-zinc-950/60 p-2.5">
+   414→                      <p className="text-sm font-black tabular-nums text-zinc-200">
+   415→                        {earnings.rides}
+   416→                      </p>
+   417→                      <p className="text-[9px] uppercase tracking-wide text-zinc-500">
+   418→                        {plural(earnings.rides, 'поездка', 'поездки', 'поездок')}
+   419→                      </p>
+   420→                    </div>
+   421→                    <div className="rounded-xl bg-zinc-950/60 p-2.5">
+   422→                      <p className="text-sm font-black tabular-nums text-zinc-200">
+   423→                        {earnings.hoursOnline.toString().replace('.', ',')} ч
+   424→                      </p>
+   425→                      <p className="text-[9px] uppercase tracking-wide text-zinc-500">на линии</p>
+   426→                    </div>
+   427→                  </div>
+   428→                  <p className="mt-3 flex items-center gap-1.5 border-t border-emerald-500/15 pt-2.5 text-[10px] leading-relaxed text-emerald-300/80">
+   429→                    <TrendingUp className="h-3 w-3 shrink-0" aria-hidden />
+   430→                    У монополиста этот же оборот оставил бы вам {rub(Math.round(earnings.gross * 0.6))} —
+   431→                    на {rub(Math.round(earnings.gross * 0.28))} меньше.
+   432→                  </p>
+   433→                </div>
+   434→
+   435→                {week.length > 0 && <WeekChart week={week} />}
+   436→
+   437→                {lastRides.length > 0 && (
+   438→                  <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
+   439→                    <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+   440→                      Последние поездки
+   441→                    </p>
+   442→                    <div className="mt-2.5 space-y-2">
+   443→                      {lastRides.map((r) => (
+   444→                        <div
+   445→                          key={r.id}
+   446→                          className="flex items-center justify-between gap-2 rounded-xl bg-zinc-950/50 px-3 py-2"
+   447→                        >
+   448→                          <p className="min-w-0 truncate text-[11px] text-zinc-400">
+   449→                            {r.from?.label} → {r.to?.label}
+   450→                          </p>
+   451→                          <span className="shrink-0 text-xs font-black tabular-nums text-emerald-400">
+   452→                            +{rub(r.driverPayout)}
+   453→                          </span>
+   454→                        </div>
+   455→                      ))}
+   456→                    </div>
+   457→                  </div>
+   458→                )}
+   459→              </>
+   460→            ) : (
+   461→              <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-zinc-800 p-8 text-center">
+   462→                <Wallet className="h-8 w-8 text-zinc-700" aria-hidden />
+   463→                <p className="text-sm font-semibold text-zinc-400">Ждём данные смены…</p>
+   464→                <p className="text-xs text-zinc-600">движок загрузит их в течение пары секунд</p>
+   465→              </div>
+   466→            )}
+   467→          </div>
+   468→        )}
+   469→
+   470→        {tab === 'profile' && (
+   471→          <div className="space-y-3 p-4">
+   472→            <h2 className="text-base font-black text-white">Профиль</h2>
+   473→
+   474→            {identity ? (
+   475→              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
+   476→                <div className="flex items-center gap-3">
+   477→                  <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-400/15 text-sm font-black text-amber-300 ring-1 ring-amber-400/25">
+   478→                    {identity.initials}
+   479→                  </span>
+   480→                  <div className="min-w-0">
+   481→                    <p className="truncate text-sm font-bold text-white">{identity.name}</p>
+   482→                    <p className="truncate text-[11px] text-zinc-400">{identity.car}</p>
+   483→                    <p className="text-[11px] font-semibold text-zinc-500">{identity.plate}</p>
+   484→                  </div>
+   485→                  <div className="ml-auto shrink-0 text-right">
+   486→                    <p className="flex items-center gap-1 text-sm font-bold text-amber-300">
+   487→                      <Star className="h-3 w-3 fill-amber-300 text-amber-300" aria-hidden />
+   488→                      {identity.rating.toFixed(2)}
+   489→                    </p>
+   490→                    <p className="text-[10px] text-zinc-500">{identity.rides} поездок</p>
+   491→                  </div>
+   492→                </div>
+   493→              </div>
+   494→            ) : (
+   495→              <div className="flex items-center justify-center rounded-2xl border border-dashed border-zinc-800 p-6 text-xs text-zinc-500">
+   496→                Профиль водителя загружается…
+   497→              </div>
+   498→            )}
+   499→
+   500→            {/* Модель комиссии / Pro */}
+   501→            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
+   502→              <div className="flex items-center justify-between gap-3">
+   503→                <div className="flex items-center gap-3">
+   504→                  <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/25">
+   505→                    <BadgePercent className="h-4.5 w-4.5" aria-hidden />
+   506→                  </span>
+   507→                  <div>
+   508→                    <p className="text-xs font-bold text-white">
+   509→                      {isPro ? 'Подписка Pro активна' : '12% с поездки'}
+   510→                    </p>
+   511→                    <p className="text-[10px] text-zinc-500">
+   512→                      {isPro ? '0% комиссии · 2 490 ₽/мес' : 'или 0% с подпиской Pro · 2 490 ₽/мес'}
+   513→                    </p>
+   514→                  </div>
+   515→                </div>
+   516→                <button
+   517→                  onClick={() => setIsPro((v) => !v)}
+   518→                  className={cn(
+   519→                    'relative h-7 w-12 shrink-0 rounded-full transition-colors',
+   520→                    isPro ? 'bg-emerald-500' : 'bg-zinc-700'
+   521→                  )}
+   522→                  role="switch"
+   523→                  aria-checked={isPro}
+   524→                  aria-label="Переключить модель оплаты на подписку Pro"
+   525→                >
+   526→                  <span
+   527→                    className={cn(
+   528→                      'absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all',
+   529→                      isPro ? 'left-6' : 'left-1'
+   530→                    )}
+   531→                  />
+   532→                </button>
+   533→              </div>
+   534→              {earnings && (
+   535→                <div
+   536→                  className={cn(
+   537→                    'mt-3 rounded-xl border p-3 text-[11px] leading-relaxed',
+   538→                    isPro
+   539→                      ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-200'
+   540→                      : 'border-zinc-700/60 bg-zinc-950/50 text-zinc-400'
+   541→                  )}
+   542→                >
+   543→                  {isPro ? (
+   544→                    <>
+   545→                      С Pro ваш доход сегодня был бы{' '}
+   546→                      <span className="font-black text-emerald-300">{rub(earnings.gross)}</span> — вся
+   547→                      выручка без комиссии. Подписка окупается от ~21 000 ₽ оборота в месяц.
+   548→                    </>
+   549→                  ) : (
+   550→                    <>
+   551→                      С Pro вы бы получили на{' '}
+   552→                      <span className="font-bold text-emerald-300">
+   553→                        {rub(Math.max(0, proDelta))}
+   554→                      </span>{' '}
+   555→                      больше за смену (комиссия {rub(earnings.commission)} минус доля подписки ~83 ₽).
+   556→                      Окупается от ~21 000 ₽ оборота в месяц.
+   557→                    </>
+   558→                  )}
+   559→                </div>
+   560→              )}
+   561→            </div>
+   562→
+   563→            {/* Анти-спешка и гарантии */}
+   564→            <div className="space-y-2">
+   565→              {[
+   566→                {
+   567→                  icon: X,
+   568→                  title: 'Отказ от заказа — без штрафа',
+   569→                  body: '«Мимо» не понижает приоритет: приоритетов не существует, есть аукцион',
+   570→                },
+   571→                {
+   572→                  icon: Clock,
+   573→                  title: 'Время в пробке — оплачивается',
+   574→                  body: 'минута стоит денег независимо от скорости движения',
+   575→                },
+   576→                {
+   577→                  icon: Handshake,
+   578→                  title: 'Налог — с чистой выплаты',
+   579→                  body: 'НПД считается от вашего дохода, а не от стоимости поездки, как у монополиста',
+   580→                },
+   581→              ].map((f) => (
+   582→                <div
+   583→                  key={f.title}
+   584→                  className="flex items-start gap-3 rounded-xl border border-zinc-800 bg-zinc-900/60 p-3.5"
+   585→                >
+   586→                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-emerald-400">
+   587→                    <f.icon className="h-3.5 w-3.5" aria-hidden />
+   588→                  </span>
+   589→                  <div>
+   590→                    <p className="text-xs font-bold text-white">{f.title}</p>
+   591→                    <p className="mt-0.5 text-[10px] leading-relaxed text-zinc-500">{f.body}</p>
+   592→                  </div>
+   593→                </div>
+   594→              ))}
+   595→            </div>
+   596→          </div>
+   597→        )}
+   598→      </div>
+   599→
+   600→      {/* ===== Нижняя навигация ===== */}
+   601→      <nav
+   602→        className="grid grid-cols-3 border-t border-zinc-800/70 bg-zinc-950"
+   603→        aria-label="Разделы приложения водителя"
+   604→      >
+   605→        {(
+   606→          [
+   607→            { id: 'shift', label: 'Смена', icon: CarFront },
+   608→            { id: 'earnings', label: 'Доход', icon: Wallet },
+   609→            { id: 'profile', label: 'Профиль', icon: User },
+   610→          ] as const
+   611→        ).map((t) => (
+   612→          <button
+   613→            key={t.id}
+   614→            onClick={() => setTab(t.id)}
+   615→            className={cn(
+   616→              'flex flex-col items-center gap-1 py-2.5 text-[10px] font-bold transition-colors',
+   617→              tab === t.id ? 'text-amber-400' : 'text-zinc-500 hover:text-zinc-300'
+   618→            )}
+   619→            aria-current={tab === t.id ? 'page' : undefined}
+   620→          >
+   621→            <t.icon className="h-5 w-5" aria-hidden />
+   622→            {t.label}
+   623→          </button>
+   624→        ))}
+   625→      </nav>
+   626→    </div>
+   627→  )
+   628→}
+   629→
+   630→function OrderCard({
+   631→  order,
+   632→  onAccept,
+   633→  onDecline,
+   634→}: {
+   635→  order: OrderDTO
+   636→  onAccept: (id: string) => void
+   637→  onDecline: (id: string) => void
+   638→}) {
+   639→  const left = timeLeft(order.expiresAt)
+   640→  const urgent = left <= 10
+   641→  const soon = left <= 25
+   642→
+   643→  return (
+   644→    <motion.div
+   645→      layout
+   646→      initial={{ opacity: 0, y: 8 }}
+   647→      animate={{ opacity: 1, y: 0 }}
+   648→      exit={{ opacity: 0, scale: 0.97 }}
+   649→      transition={{ duration: 0.25 }}
+   650→      className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4"
+   651→    >
+   652→      <div className="flex items-start justify-between gap-3">
+   653→        <div className="min-w-0 flex-1">
+   654→          <div className="flex items-start gap-2">
+   655→            <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" aria-hidden />
+   656→            <p className="truncate text-xs font-semibold text-zinc-200">{order.from.label}</p>
+   657→          </div>
+   658→          <div className="mt-1.5 flex items-start gap-2">
+   659→            <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden />
+   660→            <p className="truncate text-xs font-semibold text-zinc-200">{order.to.label}</p>
+   661→          </div>
+   662→        </div>
+   663→        <div className="shrink-0 text-right">
+   664→          <p className="text-lg font-black leading-none tabular-nums text-amber-300">
+   665→            +{rub(order.driverPayout)}
+   666→          </p>
+   667→          <p className="mt-0.5 text-[10px] text-zinc-500">чек {rub(order.priceTotal)}</p>
+   668→        </div>
+   669→      </div>
+   670→
+   671→      <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-zinc-500">
+   672→        <span className="flex items-center gap-1">
+   673→          <RouteIcon className="h-3 w-3" aria-hidden />
+   674→          {order.distanceKm} км · ~{Math.round(order.durationMin)} мин
+   675→        </span>
+   676→        <span className="flex items-center gap-1">
+   677→          <Eye className="h-3 w-3" aria-hidden />
+   678→          видят {order.watchingDrivers ?? '—'}
+   679→        </span>
+   680→        <span className="font-semibold text-zinc-400">{order.tariff.name}</span>
+   681→        {order.surge > 1 && (
+   682→          <span className="rounded bg-rose-500/15 px-1.5 py-0.5 font-bold text-rose-300">
+   683→            спрос ×{order.surge.toFixed(2).replace('.', ',')}
+   684→          </span>
+   685→        )}
+   686→      </div>
+   687→
+   688→      {/* Прогресс жизни заказа */}
+   689→      <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-zinc-800">
+   690→        <div
+   691→          className={cn(
+   692→            'h-full rounded-full transition-all duration-1000',
+   693→            urgent ? 'bg-rose-400' : soon ? 'bg-amber-400' : 'bg-emerald-500'
+   694→          )}
+   695→          style={{ width: `${Math.min(100, (left / 60) * 100)}%` }}
+   696→        />
+   697→      </div>
+   698→
+   699→      <div className="mt-2.5 flex gap-2">
+   700→        <Button
+   701→          onClick={() => onDecline(order.id)}
+   702→          variant="outline"
+   703→          className="h-10 flex-1 border-zinc-700 text-[11px] font-semibold text-zinc-400 hover:text-white"
+   704→        >
+   705→          Мимо
+   706→        </Button>
+   707→        <Button
+   708→          onClick={() => onAccept(order.id)}
+   709→          className="h-10 flex-[2] bg-emerald-500 text-[11px] font-bold text-zinc-950 hover:bg-emerald-400"
+   710→        >
+   711→          <Check className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+   712→          Взять · {rub(order.driverPayout)}
+   713→        </Button>
+   714→      </div>
+   715→      <p className="mt-1.5 text-center text-[9px] text-zinc-600">
+   716→        до истечения {left} {plural(left, 'секунда', 'секунды', 'секунд')}
+   717→      </p>
+   718→    </motion.div>
+   719→  )
+   720→}
+   721→

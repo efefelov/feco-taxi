@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>ПРЯМО · Почему сейчас</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="global.css">
+</head>
+<body>
+<div class="slide">
+
+  <!-- декор: hairline-сетка + emerald-полоса слева -->
+  <div data-decor aria-hidden="true" class="absolute inset-0 pointer-events-none">
+    <div class="absolute top-0 bottom-0" style="left:25%; width:1px; background:var(--line); opacity:.4;"></div>
+    <div class="absolute top-0 bottom-0" style="left:50%; width:1px; background:var(--line); opacity:.4;"></div>
+    <div class="absolute top-0 bottom-0" style="left:75%; width:1px; background:var(--line); opacity:.4;"></div>
+  </div>
+  <div data-decor aria-hidden="true" class="absolute left-0 top-0 h-full" style="width:5px; background:var(--accent);"></div>
+
+  <div class="relative h-full flex flex-col" style="padding:58px 64px 52px 72px;">
+
+    <span class="kicker">ОКНО ВОЗМОЖНОСТИ</span>
+    <h1 style="font-family:var(--font-heading); font-weight:700; font-size:54px; line-height:1.05; letter-spacing:-.01em; color:var(--primary); margin-top:14px;">Почему сейчас</h1>
+
+    <!-- таймлайн триггеров -->
+    <div class="relative" style="margin-top:32px; height:46px;">
+      <div class="hairline absolute" style="left:16.66%; right:16.66%; top:22px;"></div>
+      <div class="grid grid-cols-3 h-full">
+        <div class="flex justify-center"><div class="relative flex items-center justify-center" style="width:44px; height:44px; border-radius:999px; border:2px solid var(--accent); background:var(--bg);"><span class="num" style="font-size:13px; font-weight:700; color:var(--accent);">01</span></div></div>
+        <div class="flex justify-center"><div class="relative flex items-center justify-center" style="width:44px; height:44px; border-radius:999px; border:2px solid var(--accent); background:var(--bg);"><span class="num" style="font-size:13px; font-weight:700; color:var(--accent);">02</span></div></div>
+        <div class="flex justify-center"><div class="relative flex items-center justify-center" style="width:44px; height:44px; border-radius:999px; border:2px solid var(--accent); background:var(--bg);"><span class="num" style="font-size:13px; font-weight:700; color:var(--accent);">03</span></div></div>
+      </div>
+    </div>
+
+    <!-- три колонки-триггера -->
+    <div class="grid grid-cols-3 items-stretch" style="gap:24px; margin-top:24px;">
+
+      <div class="card" style="padding:28px 26px; display:flex; flex-direction:column;">
+        <div class="num" style="font-size:52px; font-weight:800; line-height:1; color:var(--accent);">2023</div>
+        <h3 style="font-family:var(--font-heading); font-weight:700; font-size:15.5px; line-height:1.45; color:var(--primary); margin-top:18px;">ФГИС „Такси“ (69-ФЗ, с 01.09.2023)</h3>
+        <p style="font-size:15px; line-height:1.62; color:var(--secondary); margin-top:10px;">Данные о каждой поездке уходят в госистему в момент события. <span style="color:var(--primary); font-weight:600;">Легальность перестала быть рвом монополиста.</span></p>
+      </div>
+
+      <div class="card" style="padding:28px 26px; display:flex; flex-direction:column;">
+        <div class="flex items-baseline" style="gap:10px;">
+          <span class="num" style="font-size:22px; font-weight:700; color:var(--secondary);">до</span>
+          <span class="num" style="font-size:52px; font-weight:800; line-height:1; color:var(--amber);">37%</span>
+        </div>
+        <h3 style="font-family:var(--font-heading); font-weight:700; font-size:15.5px; line-height:1.45; color:var(--primary); margin-top:18px;">Комиссия монополиста волатильна</h3>
+        <p style="font-size:15px; line-height:1.62; color:var(--secondary); margin-top:10px;">Водитель больше не может планировать доход; <span style="color:var(--primary); font-weight:600;">усталость водителей — наш бесплатный маркетинг.</span></p>
+      </div>
+
+      <div class="card" style="padding:28px 26px; display:flex; flex-direction:column;">
+        <div class="num" style="font-size:27px; font-weight:800; line-height:1.2; color:var(--primary);">28,7% <span style="color:var(--secondary);">→</span> <span style="color:var(--amber);">0,86%</span></div>
+        <h3 style="font-family:var(--font-heading); font-weight:700; font-size:15.5px; line-height:1.45; color:var(--primary); margin-top:18px;">Ситимобил: 28,7% московского рынка в 2020 → 0,86% к 2024</h3>
+        <p style="font-size:15px; line-height:1.62; color:var(--secondary); margin-top:10px;"><span style="color:var(--primary); font-weight:600;">Урок: копировать монополию нельзя — можно только менять правила.</span> Спрос стагнирует (<span class="num" style="color:var(--primary);">−2%</span> поездок, <span class="num" style="color:var(--primary);">Q1 2025</span>): конкуренция неценовая.</p>
+      </div>
+
+    </div>
+
+    <!-- строка-вывод -->
+    <div class="flex items-center" style="margin-top:auto; gap:28px;">
+      <div class="hairline" style="flex:1;"></div>
+      <h3 style="font-family:var(--font-heading); font-weight:700; font-size:22px; line-height:1.45; color:var(--accent); text-align:center;">Окно открылось трижды:<br>регулятор, экономика водителя, смерть имитаторов</h3>
+      <div class="hairline" style="flex:1;"></div>
+    </div>
+
+  </div>
+</div>
+
+<aside data-notes class="hidden">
+  <ul>
+    <li>DiDi ушёл, Ситимобил погиб — не потому что такси плохо, а потому что копировали монополию.</li>
+    <li>Мы меняем правила игры, а не повторяем их модель.</li>
+    <li>Триггер 01: 69-ФЗ и ФГИС „Такси“ с 01.09.2023 — легальность больше не ров монополиста.</li>
+    <li>Триггер 02: комиссия волатильна до 37% — водитель не может планировать доход, усталость работает на нас.</li>
+    <li>Триггер 03: Ситимобил 28,7% → 0,86%, спрос −2% в Q1 2025 — имитаторы мертвы, конкуренция неценовая.</li>
+  </ul>
+</aside>
+</body>
+</html>

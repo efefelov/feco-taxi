@@ -2,7 +2,10 @@
 
 import { Zap, ShieldCheck, ArrowUpRight } from 'lucide-react'
 
-const FOOTER_NAV: { title: string; links: { href: string; label: string }[] }[] = [
+const FOOTER_NAV: {
+  title: string
+  links: { href: string; label: string; download?: boolean; newTab?: boolean }[]
+}[] = [
   {
     title: 'Продукт',
     links: [
@@ -36,6 +39,17 @@ const FOOTER_NAV: { title: string; links: { href: string; label: string }[] }[] 
       { href: '#roadmap', label: 'План запуска' },
       { href: '#faq', label: 'Вопросы' },
       { href: '#join', label: 'Первая волна' },
+    ],
+  },
+  {
+    title: 'Документы проекта',
+    links: [
+      { href: '/docs/pryamo-marketing-strategy.docx', label: 'Стратегия · docx', download: true },
+      { href: '/docs/pryamo-knowledge-base.docx', label: 'База знаний · docx', download: true },
+      { href: '/docs/pryamo-project-docs.docx', label: 'Роадмап и бюджет · docx', download: true },
+      { href: '/docs/pryamo-pitch-demoday.pptx', label: 'Питч демо-дня · pptx', download: true },
+      { href: '/docs/pryamo-pitch-demoday.pdf', label: 'Питч · pdf', newTab: true },
+      { href: '/docs/pryamo-financial-model.xlsx', label: 'Финмодель · xlsx', download: true },
     ],
   },
 ]
@@ -73,7 +87,7 @@ export function Footer() {
 
           {/* Мини-карта сайта */}
           <nav
-            className="grid grid-cols-2 gap-8 sm:grid-cols-3"
+            className="grid grid-cols-2 gap-8 sm:grid-cols-4"
             aria-label="Навигация в подвале"
           >
             {FOOTER_NAV.map((col) => (
@@ -86,6 +100,9 @@ export function Footer() {
                     <li key={l.href + l.label}>
                       <a
                         href={l.href}
+                        download={l.download || undefined}
+                        target={l.newTab ? '_blank' : undefined}
+                        rel={l.newTab ? 'noreferrer' : undefined}
                         className="text-sm text-zinc-400 underline-offset-4 transition-colors hover:text-emerald-300 hover:underline hover:decoration-emerald-500/50"
                       >
                         {l.label}

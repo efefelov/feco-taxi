@@ -1,0 +1,850 @@
+     1→'use client'
+     2→
+     3→import { useEffect, useMemo, useRef, useState } from 'react'
+     4→import { AnimatePresence, motion } from 'framer-motion'
+     5→import {
+     6→  MapPin,
+     7→  ArrowRightLeft,
+     8→  ArrowUpDown,
+     9→  Dices,
+    10→  Search,
+    11→  Star,
+    12→  CarFront,
+    13→  Clock,
+    14→  Route as RouteIcon,
+    15→  Banknote,
+    16→  HandCoins,
+    17→  RotateCcw,
+    18→  BadgeCheck,
+    19→  Plus,
+    20→  History,
+    21→  User,
+    22→  CreditCard,
+    23→  Zap,
+    24→  Banknote as CashIcon,
+    25→  MessageSquare,
+    26→  ShieldCheck,
+    27→  AlertTriangle,
+    28→  Gift,
+    29→  X,
+    30→} from 'lucide-react'
+    31→import { Button } from '@/components/ui/button'
+    32→import { Input } from '@/components/ui/input'
+    33→import { cn } from '@/lib/utils'
+    34→import { toast } from '@/hooks/use-toast'
+    35→import { CityMap } from '../demo/city-map'
+    36→import { useMvpPassenger } from '@/lib/pryamo/mvp-socket'
+    37→import { estimatePrice, rub, minutesWord } from '@/lib/pryamo/format'
+    38→import type { Receipt, RideDTO, Tariff } from '@/lib/pryamo/types'
+    39→
+    40→const ADDRESS_PRESETS = [
+    41→  'ул. Тверская, 7',
+    42→  'Ленинский пр-т, 45',
+    43→  'Кутузовский пр-т, 32',
+    44→  'ул. Арбат, 24',
+    45→  'Аэропорт Шереметьево, терминал C',
+    46→  'Белорусский вокзал',
+    47→  'ул. Профсоюзная, 128',
+    48→  'Москва-Сити, башня Федерация',
+    49→  'Парк Горького, вход 1',
+    50→  'Речной вокзал, 3',
+    51→  'ул. Садовая-Кудринская, 12',
+    52→  'Киевский вокзал, пл. Европы',
+    53→]
+    54→
+    55→const PAYMENTS = [
+    56→  { id: 'card', label: 'Карта ··4821', icon: CreditCard },
+    57→  { id: 'sbp', label: 'СБП', icon: Zap },
+    58→  { id: 'cash', label: 'Наличные', icon: CashIcon },
+    59→] as const
+    60→
+    61→type Payment = (typeof PAYMENTS)[number]['id']
+    62→type Screen = 'home' | 'live' | 'receipt'
+    63→
+    64→function hash01(s: string, salt = 0): number {
+    65→  let h = 2166136261 ^ salt
+    66→  for (let i = 0; i < s.length; i++) {
+    67→    h ^= s.charCodeAt(i)
+    68→    h = Math.imul(h, 16777619)
+    69→  }
+    70→  return ((h >>> 0) % 100000) / 100000
+    71→}
+    72→
+    73→export interface PassengerHistoryItem {
+    74→  ride: RideDTO
+    75→  receipt: Receipt
+    76→  rated: boolean
+    77→  tip: number
+    78→  at: number
+    79→}
+    80→
+    81→export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
+    82→  const [tariffs, setTariffs] = useState<Tariff[]>([])
+    83→  const [from, setFrom] = useState('ул. Тверская, 7')
+    84→  const [to, setTo] = useState('Аэропорт Шереметьево, терминал C')
+    85→  const [tariffId, setTariffId] = useState('comfort')
+    86→  const [payment, setPayment] = useState<Payment>('card')
+    87→  const [comment, setComment] = useState('')
+    88→  const [screen, setScreen] = useState<Screen>('home')
+    89→  const [tab, setTab] = useState<'ride' | 'history' | 'profile'>('ride')
+    90→  const [ride, setRide] = useState<RideDTO | null>(null)
+    91→  const [receipt, setReceipt] = useState<Receipt | null>(null)
+    92→  const [failReason, setFailReason] = useState<string | null>(null)
+    93→  const [history, setHistory] = useState<PassengerHistoryItem[]>([])
+    94→
+    95→  // Рейтинг 2.0 по осям + чаевые
+    96→  const [axes, setAxes] = useState({ punctuality: 5, driving: 5, comfort: 5, cleanliness: 5 })
+    97→  const [tip, setTip] = useState(0)
+    98→  const [rated, setRated] = useState(false)
+    99→
+   100→  const screenRef = useRef<Screen>('home')
+   101→  useEffect(() => {
+   102→    screenRef.current = screen
+   103→  }, [screen])
+   104→
+   105→  useEffect(() => {
+   106→    fetch('/api/tariffs')
+   107→      .then((r) => r.json())
+   108→      .then((d) => {
+   109→        if (d.tariffs?.length) {
+   110→          setTariffs(d.tariffs)
+   111→          setTariffId(d.tariffs[1]?.id ?? d.tariffs[0]?.id)
+   112→        }
+   113→      })
+   114→      .catch(() => {})
+   115→  }, [])
+   116→
+   117→  const { book, cancel, rate, connected } = useMvpPassenger({
+   118→    onRideState: (r) => {
+   119→      setRide(r)
+   120→      setFailReason(null)
+   121→      if (screenRef.current === 'home' && r.status !== 'searching') setScreen('live')
+   122→      if (r.status !== 'searching') setScreen('live')
+   123→    },
+   124→    onCompleted: (r, rec) => {
+   125→      setRide(r)
+   126→      setReceipt(rec)
+   127→      setScreen('receipt')
+   128→      setTab('ride')
+   129→      setHistory((prev) =>
+   130→        [{ ride: r, receipt: rec, rated: false, tip: 0, at: Date.now() }, ...prev].slice(0, 20)
+   131→      )
+   132→    },
+   133→    onRated: (message) => {
+   134→      setRated(true)
+   135→      toast({ title: 'Оценка отправлена', description: message })
+   136→    },
+   137→    onFailed: () => {
+   138→      setFailReason('expired')
+   139→      setScreen('home')
+   140→      toast({
+   141→        title: 'Водитель не найден',
+   142→        description:
+   143→          'Заказ прождал в ленте 45–75 секунд, и его никто не взял. Мы не показываем «вечный поиск» — попробуйте ещё раз.',
+   144→      })
+   145→    },
+   146→    onCancelled: (ok) => {
+   147→      if (ok) {
+   148→        setScreen('home')
+   149→        setRide(null)
+   150→        toast({
+   151→          title: 'Поиск отменён',
+   152→          description: 'Отмена до назначения водителя — бесплатна и всегда.',
+   153→        })
+   154→      } else {
+   155→        toast({
+   156→          title: 'Отмена недоступна',
+   157→          description: 'Водитель уже выехал — поездку можно завершить только по окончании.',
+   158→        })
+   159→      }
+   160→    },
+   161→  })
+   162→
+   163→  const tariff = tariffs.find((t) => t.id === tariffId)
+   164→
+   165→  const distanceKm = useMemo(
+   166→    () => Math.round((3 + hash01(from + to, 7) * 22) * 10) / 10,
+   167→    [from, to]
+   168→  )
+   169→  const durationMin = useMemo(() => Math.round(distanceKm * 2.2 + 4), [distanceKm])
+   170→  const price = useMemo(
+   171→    () => (tariff ? estimatePrice(tariff, distanceKm, durationMin) : 0),
+   172→    [tariff, distanceKm, durationMin]
+   173→  )
+   174→
+   175→  const randomize = () => {
+   176→    const f = ADDRESS_PRESETS[Math.floor(Math.random() * ADDRESS_PRESETS.length)]
+   177→    let t = ADDRESS_PRESETS[Math.floor(Math.random() * ADDRESS_PRESETS.length)]
+   178→    while (t === f) t = ADDRESS_PRESETS[Math.floor(Math.random() * ADDRESS_PRESETS.length)]
+   179→    setFrom(f)
+   180→    setTo(t)
+   181→  }
+   182→
+   183→  const submitBook = () => {
+   184→    if (!from.trim() || !to.trim()) {
+   185→      toast({ title: 'Заполните адреса', description: 'Откуда и куда — обязательные поля.' })
+   186→      return
+   187→    }
+   188→    setRide(null)
+   189→    setReceipt(null)
+   190→    setRated(false)
+   191→    setFailReason(null)
+   192→    setAxes({ punctuality: 5, driving: 5, comfort: 5, cleanliness: 5 })
+   193→    setTip(0)
+   194→    setScreen('live')
+   195→    setTab('ride')
+   196→    book({ from: from.trim(), to: to.trim(), tariffId })
+   197→  }
+   198→
+   199→  const resetToForm = () => {
+   200→    setScreen('home')
+   201→    setRide(null)
+   202→    setReceipt(null)
+   203→    setRated(false)
+   204→  }
+   205→
+   206→  const submitRate = () => {
+   207→    if (!ride) return
+   208→    rate({ rideId: ride.id, axes, tip })
+   209→    setHistory((prev) => {
+   210→      const next = [...prev]
+   211→      if (next[0] && next[0].ride.id === ride.id) {
+   212→        next[0] = { ...next[0], rated: true, tip }
+   213→      }
+   214→      return next
+   215→    })
+   216→  }
+   217→
+   218→  return (
+   219→    <div className="flex h-full min-h-0 flex-col bg-zinc-950">
+   220→      {/* ===== Шапка приложения ===== */}
+   221→      <header className="flex items-center justify-between border-b border-zinc-800/70 px-4 py-3">
+   222→        <div className="flex items-center gap-2.5">
+   223→          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500 text-zinc-950">
+   224→            <Zap className="h-4 w-4" strokeWidth={2.6} />
+   225→          </span>
+   226→          <div className="leading-none">
+   227→            <p className="text-sm font-black tracking-tight text-white">ПРЯМО</p>
+   228→            <p className="text-[9px] font-medium uppercase tracking-[0.18em] text-emerald-400">
+   229→              приложение пассажира
+   230→            </p>
+   231→          </div>
+   232→        </div>
+   233→        <div className="flex items-center gap-2">
+   234→          {connected && (
+   235→            <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-300">
+   236→              <span className="relative flex h-1.5 w-1.5">
+   237→                <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 bg-emerald-400" />
+   238→                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+   239→              </span>
+   240→              движок онлайн
+   241→            </span>
+   242→          )}
+   243→          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-xs font-black text-zinc-200">
+   244→            ВЫ
+   245→          </span>
+   246→        </div>
+   247→      </header>
+   248→
+   249→      {/* ===== Контент ===== */}
+   250→      <div className="pryamo-scroll min-h-0 flex-1 overflow-y-auto">
+   251→        {tab === 'ride' && (
+   252→          <AnimatePresence mode="wait">
+   253→            {screen === 'home' && (
+   254→              <motion.div
+   255→                key="home"
+   256→                initial={{ opacity: 0, y: 10 }}
+   257→                animate={{ opacity: 1, y: 0 }}
+   258→                exit={{ opacity: 0, y: -10 }}
+   259→                className="p-4"
+   260→              >
+   261→                {failReason && (
+   262→                  <div className="mb-3 flex items-start gap-2.5 rounded-xl border border-amber-400/30 bg-amber-400/10 p-3.5">
+   263→                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" aria-hidden />
+   264→                    <div className="text-xs leading-relaxed text-amber-200">
+   265→                      <p className="font-bold">Водитель не найден</p>
+   266→                      <p className="mt-0.5 text-amber-200/70">
+   267→                        Заказ прождал в ленте 45–75 секунд, и его никто не взял. Мы не показываем
+   268→                        «вечный поиск» — попробуйте заказать ещё раз.
+   269→                      </p>
+   270→                    </div>
+   271→                  </div>
+   272→                )}
+   273→
+   274→                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4">
+   275→                  <div className="flex items-center justify-between">
+   276→                    <h2 className="text-base font-black text-white">Куда едем?</h2>
+   277→                    <button
+   278→                      onClick={randomize}
+   279→                      className="flex items-center gap-1.5 rounded-lg border border-zinc-700 px-2.5 py-1.5 text-[11px] font-semibold text-zinc-300 transition-colors hover:border-emerald-500/50 hover:text-emerald-300"
+   280→                      aria-label="Случайные адреса"
+   281→                    >
+   282→                      <Dices className="h-3.5 w-3.5" />
+   283→                      Случайно
+   284→                    </button>
+   285→                  </div>
+   286→
+   287→                  <div className="relative mt-3.5 space-y-2.5">
+   288→                    <div className="relative">
+   289→                      <span
+   290→                        className="absolute left-3 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full border-2 border-emerald-400 bg-zinc-950"
+   291→                        aria-hidden
+   292→                      />
+   293→                      <Input
+   294→                        value={from}
+   295→                        onChange={(e) => setFrom(e.target.value)}
+   296→                        placeholder="Откуда"
+   297→                        aria-label="Адрес подачи"
+   298→                        className="border-zinc-700 bg-zinc-950/60 pl-9 text-sm text-white placeholder:text-zinc-500"
+   299→                      />
+   300→                    </div>
+   301→                    <button
+   302→                      onClick={() => {
+   303→                        setFrom(to)
+   304→                        setTo(from)
+   305→                      }}
+   306→                      className="absolute right-2 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-zinc-400 transition-colors hover:border-emerald-500/50 hover:text-emerald-300"
+   307→                      aria-label="Поменять адреса местами"
+   308→                    >
+   309→                      <ArrowUpDown className="h-3.5 w-3.5" />
+   310→                    </button>
+   311→                    <div className="relative">
+   312→                      <span
+   313→                        className="absolute left-[11px] top-1/2 h-2.5 w-2 -translate-y-1/2 rotate-45 border-r-2 border-b-2 border-amber-400 bg-zinc-950"
+   314→                        aria-hidden
+   315→                      />
+   316→                      <Input
+   317→                        value={to}
+   318→                        onChange={(e) => setTo(e.target.value)}
+   319→                        placeholder="Куда"
+   320→                        aria-label="Адрес назначения"
+   321→                        className="border-zinc-700 bg-zinc-950/60 pl-9 text-sm text-white placeholder:text-zinc-500"
+   322→                      />
+   323→                    </div>
+   324→                  </div>
+   325→
+   326→                  {/* Тарифы — горизонтальная лента */}
+   327→                  <div className="mt-4">
+   328→                    <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+   329→                      Класс машины
+   330→                    </p>
+   331→                    <div className="pryamo-scroll flex gap-2 overflow-x-auto pb-1">
+   332→                      {tariffs.slice(0, 6).map((t) => (
+   333→                        <button
+   334→                          key={t.id}
+   335→                          onClick={() => setTariffId(t.id)}
+   336→                          className={cn(
+   337→                            'min-w-[104px] shrink-0 rounded-xl border p-3 text-left transition-all',
+   338→                            tariffId === t.id
+   339→                              ? 'border-emerald-500 bg-emerald-500/10'
+   340→                              : 'border-zinc-700 bg-zinc-950/40 hover:border-zinc-600'
+   341→                          )}
+   342→                          aria-pressed={tariffId === t.id}
+   343→                        >
+   344→                          <p className="text-xs font-bold text-white">{t.name}</p>
+   345→                          <p className="mt-1 text-sm font-black tabular-nums text-emerald-400">
+   346→                            {rub(estimatePrice(t, distanceKm, durationMin))}
+   347→                          </p>
+   348→                          <p className="mt-0.5 text-[10px] text-zinc-500">
+   349→                            подача ~{4 + Math.floor(hash01(t.id) * 5)} мин
+   350→                          </p>
+   351→                        </button>
+   352→                      ))}
+   353→                    </div>
+   354→                  </div>
+   355→
+   356→                  {/* Оплата + комментарий */}
+   357→                  <div className="mt-4 space-y-2.5">
+   358→                    <div className="flex gap-2">
+   359→                      {PAYMENTS.map((p) => (
+   360→                        <button
+   361→                          key={p.id}
+   362→                          onClick={() => setPayment(p.id)}
+   363→                          className={cn(
+   364→                            'flex flex-1 items-center justify-center gap-1.5 rounded-lg border py-2 text-[11px] font-bold transition-all',
+   365→                            payment === p.id
+   366→                              ? 'border-emerald-500 bg-emerald-500/15 text-emerald-300'
+   367→                              : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'
+   368→                          )}
+   369→                          aria-pressed={payment === p.id}
+   370→                        >
+   371→                          <p.icon className="h-3.5 w-3.5" aria-hidden />
+   372→                          {p.label}
+   373→                        </button>
+   374→                      ))}
+   375→                    </div>
+   376→                    <div className="relative">
+   377→                      <MessageSquare
+   378→                        className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-500"
+   379→                        aria-hidden
+   380→                      />
+   381→                      <Input
+   382→                        value={comment}
+   383→                        onChange={(e) => setComment(e.target.value)}
+   384→                        placeholder="Комментарий водителю (необязательно)"
+   385→                        aria-label="Комментарий водителю"
+   386→                        className="border-zinc-700 bg-zinc-950/60 pl-9 text-xs text-white placeholder:text-zinc-500"
+   387→                      />
+   388→                    </div>
+   389→                  </div>
+   390→
+   391→                  {/* Оценка цены */}
+   392→                  {price > 0 && (
+   393→                    <div className="mt-4 rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3.5">
+   394→                      <div className="flex items-baseline justify-between">
+   395→                        <span className="text-xs font-semibold text-zinc-300">Итого, фикс до конца</span>
+   396→                        <span className="text-2xl font-black tabular-nums text-white">{rub(price)}</span>
+   397→                      </div>
+   398→                      <div className="mt-2.5 space-y-1 border-t border-emerald-500/15 pt-2.5 text-xs">
+   399→                        <div className="flex justify-between text-zinc-400">
+   400→                          <span className="flex items-center gap-1.5">
+   401→                            <RouteIcon className="h-3 w-3" aria-hidden /> {distanceKm} км · {durationMin}{' '}
+   402→                            {minutesWord(durationMin)}
+   403→                          </span>
+   404→                          <span />
+   405→                        </div>
+   406→                        <div className="flex justify-between">
+   407→                          <span className="text-zinc-500">Водитель получит · 88%</span>
+   408→                          <span className="font-bold text-emerald-400">
+   409→                            {rub(Math.round(price * 0.88))}
+   410→                          </span>
+   411→                        </div>
+   412→                        <div className="flex justify-between">
+   413→                          <span className="text-zinc-500">Комиссия ПРЯМО · 12% фикс</span>
+   414→                          <span className="font-semibold text-zinc-300">
+   415→                            {rub(Math.round(price * 0.12))}
+   416→                          </span>
+   417→                        </div>
+   418→                      </div>
+   419→                    </div>
+   420→                  )}
+   421→
+   422→                  <Button
+   423→                    onClick={submitBook}
+   424→                    disabled={!connected || !tariff}
+   425→                    className="mt-4 h-12 w-full bg-emerald-500 text-sm font-bold text-zinc-950 hover:bg-emerald-400 disabled:opacity-50"
+   426→                  >
+   427→                    <Search className="mr-2 h-4 w-4" />
+   428→                    {connected ? `Заказать за ${rub(price)}` : 'Подключение к движку…'}
+   429→                  </Button>
+   430→                  <p className="mt-2 flex items-center justify-center gap-1.5 text-[10px] text-zinc-600">
+   431→                    <ShieldCheck className="h-3 w-3 text-emerald-500/70" aria-hidden />
+   432→                    Отмена до подачи водителя — всегда бесплатна
+   433→                  </p>
+   434→                </div>
+   435→
+   436→                {/* Подсказка: заказ уйдёт живому водителю */}
+   437→                <button
+   438→                  onClick={() => onOpenDriver?.()}
+   439→                  className="mt-3 flex w-full items-center gap-3 rounded-2xl border border-amber-400/25 bg-amber-400/5 p-3.5 text-left transition-colors hover:border-amber-400/40"
+   440→                >
+   441→                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-400/15 text-amber-400 ring-1 ring-amber-400/25">
+   442→                    <CarFront className="h-4.5 w-4.5" aria-hidden />
+   443→                  </span>
+   444→                  <span className="min-w-0">
+   445→                    <span className="block text-xs font-bold text-white">
+   446→                      Заказ увидит живой водитель
+   447→                    </span>
+   448→                    <span className="block text-[11px] leading-snug text-zinc-500">
+   449→                      Он появится в ленте приложения водителя — откройте вторую роль и примите
+   450→                      свой же заказ
+   451→                    </span>
+   452→                  </span>
+   453→                </button>
+   454→              </motion.div>
+   455→            )}
+   456→
+   457→            {screen === 'live' && (
+   458→              <motion.div
+   459→                key="live"
+   460→                initial={{ opacity: 0, y: 10 }}
+   461→                animate={{ opacity: 1, y: 0 }}
+   462→                exit={{ opacity: 0, y: -10 }}
+   463→                className="p-4"
+   464→              >
+   465→                {/* Карта */}
+   466→                <CityMap
+   467→                  variant="ride"
+   468→                  ride={
+   469→                    ride ?? {
+   470→                      from: { label: from, zoneId: '' },
+   471→                      to: { label: to, zoneId: '' },
+   472→                      status: 'searching' as const,
+   473→                      progress: 0,
+   474→                    } as RideDTO
+   475→                  }
+   476→                  searching={!ride || ride.status === 'searching'}
+   477→                  className="h-56 w-full overflow-hidden rounded-2xl border border-zinc-800"
+   478→                />
+   479→
+   480→                <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4">
+   481→                  <div className="flex items-center gap-2">
+   482→                    {ride?.status === 'searching' || !ride ? (
+   483→                      <>
+   484→                        <Search className="h-5 w-5 animate-pulse text-emerald-400" />
+   485→                        <h3 className="text-base font-black text-white">Ищем водителя</h3>
+   486→                      </>
+   487→                    ) : ride.status === 'arriving' ? (
+   488→                      <>
+   489→                        <CarFront className="h-5 w-5 text-amber-400" />
+   490→                        <h3 className="text-base font-black text-white">Водитель едет к вам</h3>
+   491→                      </>
+   492→                    ) : (
+   493→                      <>
+   494→                        <RouteIcon className="h-5 w-5 text-emerald-400" />
+   495→                        <h3 className="text-base font-black text-white">В пути</h3>
+   496→                      </>
+   497→                    )}
+   498→                  </div>
+   499→                  <p className="mt-1.5 min-h-5 text-xs text-zinc-400">
+   500→                    {ride?.hint ?? 'Ищем ближайшего водителя…'}
+   501→                  </p>
+   502→
+   503→                  {ride?.driver && (
+   504→                    <div className="mt-3.5 rounded-xl border border-zinc-700 bg-zinc-950/60 p-3.5">
+   505→                      <div className="flex items-center gap-3">
+   506→                        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/15 text-xs font-black text-emerald-300">
+   507→                          {ride.driver.initials}
+   508→                        </span>
+   509→                        <div className="min-w-0 flex-1">
+   510→                          <p className="truncate text-sm font-bold text-white">{ride.driver.name}</p>
+   511→                          <p className="truncate text-[11px] text-zinc-400">{ride.driver.car}</p>
+   512→                          <p className="text-[11px] font-semibold text-zinc-500">{ride.driver.plate}</p>
+   513→                        </div>
+   514→                        <div className="text-right">
+   515→                          <p className="flex items-center gap-1 text-sm font-bold text-amber-300">
+   516→                            <Star className="h-3 w-3 fill-amber-300" aria-hidden />
+   517→                            {ride.driver.rating.toFixed(2)}
+   518→                          </p>
+   519→                          <p className="text-[10px] text-zinc-500">{ride.driver.rides} поездок</p>
+   520→                        </div>
+   521→                      </div>
+   522→                    </div>
+   523→                  )}
+   524→
+   525→                  <div className="mt-3.5 grid grid-cols-3 gap-2 text-center">
+   526→                    <div className="rounded-xl bg-zinc-950/60 p-2.5">
+   527→                      <Clock className="mx-auto h-3.5 w-3.5 text-zinc-500" aria-hidden />
+   528→                      <p className="mt-1 text-base font-black tabular-nums text-white">
+   529→                        {ride?.etaMin ?? '—'}
+   530→                      </p>
+   531→                      <p className="text-[9px] uppercase tracking-wide text-zinc-500">мин</p>
+   532→                    </div>
+   533→                    <div className="rounded-xl bg-zinc-950/60 p-2.5">
+   534→                      <RouteIcon className="mx-auto h-3.5 w-3.5 text-zinc-500" aria-hidden />
+   535→                      <p className="mt-1 text-base font-black tabular-nums text-white">
+   536→                        {ride?.distanceKm?.toFixed(1) ?? '—'}
+   537→                      </p>
+   538→                      <p className="text-[9px] uppercase tracking-wide text-zinc-500">км</p>
+   539→                    </div>
+   540→                    <div className="rounded-xl bg-zinc-950/60 p-2.5">
+   541→                      <Banknote className="mx-auto h-3.5 w-3.5 text-zinc-500" aria-hidden />
+   542→                      <p className="mt-1 text-base font-black tabular-nums text-white">
+   543→                        {ride?.priceTotal ?? price}
+   544→                      </p>
+   545→                      <p className="text-[9px] uppercase tracking-wide text-zinc-500">₽ фикс</p>
+   546→                    </div>
+   547→                  </div>
+   548→
+   549→                  {ride && ride.status === 'onboard' && (
+   550→                    <div className="mt-3.5">
+   551→                      <div className="flex justify-between text-[10px] text-zinc-500">
+   552→                        <span className="max-w-[45%] truncate">{ride.from.label}</span>
+   553→                        <span className="max-w-[45%] truncate text-right">{ride.to.label}</span>
+   554→                      </div>
+   555→                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-zinc-800">
+   556→                        <div
+   557→                          className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-amber-400 transition-all duration-1000"
+   558→                          style={{ width: `${Math.round((ride.progress ?? 0) * 100)}%` }}
+   559→                        />
+   560→                      </div>
+   561→                    </div>
+   562→                  )}
+   563→
+   564→                  {(ride?.status === 'searching' || !ride) && (
+   565→                    <Button
+   566→                      variant="outline"
+   567→                      onClick={() => cancel()}
+   568→                      className="mt-3.5 w-full border-zinc-700 text-xs text-zinc-400 hover:text-white"
+   569→                    >
+   570→                      <X className="mr-1.5 h-3.5 w-3.5" />
+   571→                      Отменить поиск
+   572→                    </Button>
+   573→                  )}
+   574→                </div>
+   575→              </motion.div>
+   576→            )}
+   577→
+   578→            {screen === 'receipt' && receipt && (
+   579→              <motion.div
+   580→                key="receipt"
+   581→                initial={{ opacity: 0, y: 10 }}
+   582→                animate={{ opacity: 1, y: 0 }}
+   583→                exit={{ opacity: 0, y: -10 }}
+   584→                className="p-4"
+   585→              >
+   586→                <div className="rounded-2xl border border-emerald-500/40 bg-zinc-900/70 p-4">
+   587→                  <div className="flex items-center gap-2">
+   588→                    <BadgeCheck className="h-5 w-5 text-emerald-400" aria-hidden />
+   589→                    <h3 className="text-base font-black text-white">Поездка завершена</h3>
+   590→                  </div>
+   591→
+   592→                  <div className="mt-3.5 space-y-2 rounded-xl border border-zinc-700 bg-zinc-950/60 p-3.5 text-xs">
+   593→                    <div className="flex justify-between text-zinc-400">
+   594→                      <span>Поездка</span>
+   595→                      <span className="max-w-48 truncate text-right text-zinc-300">
+   596→                        {ride?.from?.label} → {ride?.to?.label}
+   597→                      </span>
+   598→                    </div>
+   599→                    <div className="flex justify-between text-zinc-400">
+   600→                      <span>Тариф · {PAYMENTS.find((p) => p.id === payment)?.label}</span>
+   601→                      <span className="font-semibold text-zinc-300">{ride?.tariffName}</span>
+   602→                    </div>
+   603→                    <div className="flex justify-between border-t border-zinc-800 pt-2 text-zinc-400">
+   604→                      <span>Оплачено</span>
+   605→                      <span className="font-bold text-white">{rub(receipt.price)}</span>
+   606→                    </div>
+   607→                    <div className="flex justify-between text-zinc-400">
+   608→                      <span>Комиссия ПРЯМО</span>
+   609→                      <span className="font-semibold text-zinc-300">
+   610→                        {rub(receipt.commissionRub)} · 12%
+   611→                      </span>
+   612→                    </div>
+   613→                    {tip > 0 && (
+   614→                      <div className="flex justify-between text-zinc-400">
+   615→                        <span>Чаевые (100% водителю)</span>
+   616→                        <span className="font-semibold text-emerald-400">{rub(tip)}</span>
+   617→                      </div>
+   618→                    )}
+   619→                    <div className="flex justify-between border-t border-zinc-800 pt-2">
+   620→                      <span className="font-semibold text-zinc-300">Водитель получил</span>
+   621→                      <span className="text-base font-black tabular-nums text-emerald-400">
+   622→                        {rub(receipt.driverPayout + tip)}
+   623→                      </span>
+   624→                    </div>
+   625→                  </div>
+   626→
+   627→                  {!rated ? (
+   628→                    <div className="mt-4">
+   629→                      <p className="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+   630→                        <Star className="h-3 w-3 text-amber-400" aria-hidden />
+   631→                        Рейтинг 2.0 — по осям, с апелляцией
+   632→                      </p>
+   633→                      <div className="space-y-1.5">
+   634→                        {(
+   635→                          [
+   636→                            ['punctuality', 'Пунктуальность'],
+   637→                            ['driving', 'Вождение'],
+   638→                            ['comfort', 'Комфорт'],
+   639→                            ['cleanliness', 'Чистота'],
+   640→                          ] as const
+   641→                        ).map(([key, label]) => (
+   642→                          <div
+   643→                            key={key}
+   644→                            className="flex items-center justify-between rounded-lg bg-zinc-950/50 px-3 py-1.5"
+   645→                          >
+   646→                            <span className="text-xs text-zinc-300">{label}</span>
+   647→                            <div className="flex gap-0.5">
+   648→                              {[1, 2, 3, 4, 5].map((s) => (
+   649→                                <button
+   650→                                  key={s}
+   651→                                  onClick={() => setAxes((a) => ({ ...a, [key]: s }))}
+   652→                                  aria-label={`${label}: ${s}`}
+   653→                                  className="p-0.5"
+   654→                                >
+   655→                                  <Star
+   656→                                    className={cn(
+   657→                                      'h-4 w-4 transition-colors',
+   658→                                      axes[key] >= s
+   659→                                        ? 'fill-amber-400 text-amber-400'
+   660→                                        : 'text-zinc-600 hover:text-zinc-400'
+   661→                                    )}
+   662→                                  />
+   663→                                </button>
+   664→                              ))}
+   665→                            </div>
+   666→                          </div>
+   667→                        ))}
+   668→                      </div>
+   669→
+   670→                      <p className="mb-1.5 mt-3 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+   671→                        Чаевые — 100% водителю
+   672→                      </p>
+   673→                      <div className="flex gap-1.5">
+   674→                        {[0, 50, 100, 200].map((t) => (
+   675→                          <button
+   676→                            key={t}
+   677→                            onClick={() => setTip(t)}
+   678→                            className={cn(
+   679→                              'flex-1 rounded-lg border py-2 text-xs font-bold transition-all',
+   680→                              tip === t
+   681→                                ? 'border-emerald-500 bg-emerald-500/15 text-emerald-300'
+   682→                                : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'
+   683→                            )}
+   684→                          >
+   685→                            {t === 0 ? 'Без' : `${t} ₽`}
+   686→                          </button>
+   687→                        ))}
+   688→                      </div>
+   689→
+   690→                      <Button
+   691→                        onClick={submitRate}
+   692→                        className="mt-3 h-10 w-full bg-amber-400 text-xs font-bold text-zinc-950 hover:bg-amber-300"
+   693→                      >
+   694→                        <HandCoins className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+   695→                        Отправить оценку{tip > 0 ? ` и ${tip} ₽` : ''}
+   696→                      </Button>
+   697→                    </div>
+   698→                  ) : (
+   699→                    <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-xs text-emerald-200">
+   700→                      <BadgeCheck className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
+   701→                      Спасибо! Оценка сохранена{tip > 0 ? `, чаевые ${rub(tip)} переданы водителю полностью` : ''}.
+   702→                    </div>
+   703→                  )}
+   704→
+   705→                  <Button
+   706→                    variant="outline"
+   707→                    onClick={resetToForm}
+   708→                    className="mt-3 w-full border-zinc-700 text-xs text-zinc-400 hover:text-white"
+   709→                  >
+   710→                    <RotateCcw className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+   711→                    Заказать ещё
+   712→                  </Button>
+   713→                </div>
+   714→              </motion.div>
+   715→            )}
+   716→          </AnimatePresence>
+   717→        )}
+   718→
+   719→        {tab === 'history' && (
+   720→          <div className="p-4">
+   721→            <h2 className="text-base font-black text-white">История поездок</h2>
+   722→            {history.length === 0 ? (
+   723→              <div className="mt-6 flex flex-col items-center gap-2 rounded-2xl border border-dashed border-zinc-800 p-8 text-center">
+   724→                <History className="h-8 w-8 text-zinc-700" aria-hidden />
+   725→                <p className="text-sm font-semibold text-zinc-400">Поездок пока нет</p>
+   726→                <p className="text-xs text-zinc-600">
+   727→                  Закажите первую — она появится здесь с честным чеком
+   728→                </p>
+   729→              </div>
+   730→            ) : (
+   731→              <div className="mt-3 space-y-2">
+   732→                {history.map((h) => (
+   733→                  <div key={h.ride.id + h.at} className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3.5">
+   734→                    <div className="flex items-center justify-between gap-2">
+   735→                      <p className="min-w-0 truncate text-xs text-zinc-400">
+   736→                        {h.ride.from?.label} → {h.ride.to?.label}
+   737→                      </p>
+   738→                      <p className="shrink-0 text-sm font-black tabular-nums text-white">
+   739→                        {rub(h.receipt.price)}
+   740→                      </p>
+   741→                    </div>
+   742→                    <div className="mt-1.5 flex items-center justify-between text-[10px] text-zinc-600">
+   743→                      <span>
+   744→                        {h.ride.tariffName} · {h.ride.distanceKm} км ·{' '}
+   745→                        {new Date(h.at).toLocaleTimeString('ru-RU', {
+   746→                          hour: '2-digit',
+   747→                          minute: '2-digit',
+   748→                        })}
+   749→                      </span>
+   750→                      <span className="flex items-center gap-1">
+   751→                        {h.rated ? (
+   752→                          <>
+   753→                            <Star className="h-3 w-3 fill-amber-400 text-amber-400" aria-hidden />
+   754→                            {h.tip > 0 ? `+ ${rub(h.tip)} чаевых` : 'оценено'}
+   755→                          </>
+   756→                        ) : (
+   757→                          'без оценки'
+   758→                        )}
+   759→                      </span>
+   760→                    </div>
+   761→                  </div>
+   762→                ))}
+   763→              </div>
+   764→            )}
+   765→          </div>
+   766→        )}
+   767→
+   768→        {tab === 'profile' && (
+   769→          <div className="space-y-3 p-4">
+   770→            <h2 className="text-base font-black text-white">Профиль</h2>
+   771→            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
+   772→              <div className="flex items-center gap-3">
+   773→                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-zinc-800 text-sm font-black text-zinc-200">
+   774→                  ВЫ
+   775→                </span>
+   776→                <div>
+   777→                  <p className="text-sm font-bold text-white">Пассажир ПРЯМО</p>
+   778→                  <p className="text-[11px] text-zinc-500">
+   779→                    {PAYMENTS.find((p) => p.id === payment)?.label} · способ оплаты по умолчанию
+   780→                  </p>
+   781→                </div>
+   782→              </div>
+   783→            </div>
+   784→            <div className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
+   785→              <div className="flex items-center gap-3">
+   786→                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/25">
+   787→                  <ShieldCheck className="h-4 w-4" aria-hidden />
+   788→                </span>
+   789→                <div>
+   790→                  <p className="text-xs font-bold text-white">Фикс-цена всегда</p>
+   791→                  <p className="text-[10px] text-zinc-500">
+   792→                    пересчётов в пути нет — ни при каких пробках
+   793→                  </p>
+   794→                </div>
+   795→              </div>
+   796→            </div>
+   797→            <button className="flex w-full items-center justify-between rounded-2xl border border-amber-400/25 bg-amber-400/5 p-4 text-left transition-colors hover:border-amber-400/40">
+   798→              <span className="flex items-center gap-3">
+   799→                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-400/15 text-amber-400 ring-1 ring-amber-400/25">
+   800→                  <Gift className="h-4 w-4" aria-hidden />
+   801→                </span>
+   802→                <span>
+   803→                  <span className="block text-xs font-bold text-white">
+   804→                    Пригласи друга — по 300 ₽
+   805→                  </span>
+   806→                  <span className="block text-[10px] text-zinc-500">
+   807→                    бонус гасится 10% каждой поездкой
+   808→                  </span>
+   809→                </span>
+   810→              </span>
+   811→            </button>
+   812→            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 text-[11px] leading-relaxed text-zinc-500">
+   813→              «ПРЯМО MVP» — интерактивный прототип приложения. Поездки выполняет движок симуляции
+   814→              на WebSocket (порт 3003): заказы, водители, цены и чеки считаются по правилам ПРЯМО
+   815→              в реальном времени.
+   816→            </div>
+   817→          </div>
+   818→        )}
+   819→      </div>
+   820→
+   821→      {/* ===== Нижняя навигация ===== */}
+   822→      <nav
+   823→        className="grid grid-cols-3 border-t border-zinc-800/70 bg-zinc-950"
+   824→        aria-label="Разделы приложения пассажира"
+   825→      >
+   826→        {(
+   827→          [
+   828→            { id: 'ride', label: 'Поездка', icon: Plus },
+   829→            { id: 'history', label: 'История', icon: History },
+   830→            { id: 'profile', label: 'Профиль', icon: User },
+   831→          ] as const
+   832→        ).map((t) => (
+   833→          <button
+   834→            key={t.id}
+   835→            onClick={() => setTab(t.id)}
+   836→            className={cn(
+   837→              'flex flex-col items-center gap-1 py-2.5 text-[10px] font-bold transition-colors',
+   838→              tab === t.id ? 'text-emerald-400' : 'text-zinc-500 hover:text-zinc-300'
+   839→            )}
+   840→            aria-current={tab === t.id ? 'page' : undefined}
+   841→          >
+   842→            <t.icon className="h-5 w-5" aria-hidden />
+   843→            {t.label}
+   844→          </button>
+   845→        ))}
+   846→      </nav>
+   847→    </div>
+   848→  )
+   849→}
+   850→

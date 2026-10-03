@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>ПРЯМО · 05 · Почему монополист не может ответить</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="global.css">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+  .h1{font-family:var(--font-heading);font-weight:900;font-size:44px;line-height:1.15;letter-spacing:-.01em;color:var(--primary);}
+  .lbl{font-family:var(--font-num);font-size:11px;font-weight:500;letter-spacing:.3em;text-transform:uppercase;}
+  .hero-num{font-weight:800;font-size:68px;line-height:1;letter-spacing:-.04em;}
+  .beam-wrap{position:relative;height:30px;}
+  .beam{position:absolute;left:4px;right:4px;top:4px;height:2px;background:linear-gradient(90deg,rgba(245,158,11,.6),var(--line) 42%,var(--line) 58%,rgba(16,185,129,.6));}
+  .beam-diamond{position:absolute;left:50%;top:-1px;width:11px;height:11px;transform:translateX(-50%) rotate(45deg);border:1.5px solid var(--amber);background:var(--bg);}
+  .beam-fulcrum{position:absolute;left:50%;top:7px;transform:translateX(-50%);width:0;height:0;border-left:11px solid transparent;border-right:11px solid transparent;border-bottom:15px solid var(--line);}
+  .cord{position:absolute;top:6px;width:2px;height:24px;background:var(--line);}
+  .argcard{display:flex;flex-direction:column;gap:7px;padding:16px 18px;}
+  .argnum{font-family:var(--font-num);font-size:12px;font-weight:700;letter-spacing:.22em;color:var(--amber);}
+  .argtext{font-size:14px;line-height:1.45;color:var(--primary);}
+</style>
+</head>
+<body>
+<div class="slide">
+  <div style="height:100%;display:flex;flex-direction:column;justify-content:space-between;padding:56px 60px 48px;">
+
+    <!-- Шапка -->
+    <div>
+      <div class="kicker kicker-amber">РОВ БИЗНЕС-МОДЕЛИ</div>
+      <h1 class="h1" style="margin-top:10px;"><span class="attn">24%</span> кормят его P&amp;L —<br>поэтому он не ответит</h1>
+    </div>
+
+    <!-- Весы: типографическая балка + две чаши-карточки -->
+    <div>
+      <div class="beam-wrap" data-decor aria-hidden="true">
+        <div class="beam"></div>
+        <div class="cord" style="left:20%;"></div>
+        <div class="cord" style="right:20%;"></div>
+        <div class="beam-fulcrum"></div>
+        <div class="beam-diamond"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:470px 212px 1fr;height:256px;margin-top:4px;">
+
+        <!-- Левая чаша: их P&L -->
+        <section class="card-amber" style="border-radius:18px;display:flex;flex-direction:column;padding:20px 24px;">
+          <div class="lbl" style="color:var(--amber);">Их P&amp;L</div>
+          <div style="display:flex;align-items:baseline;gap:12px;margin-top:8px;">
+            <div class="num hero-num attn">24%+</div>
+            <div style="font-size:13.5px;color:var(--secondary);">комиссия</div>
+          </div>
+          <div class="hairline" style="margin:14px 0 12px;"></div>
+          <div style="display:flex;align-items:flex-start;gap:10px;">
+            <i class="material-icons attn" style="font-size:19px;line-height:1.4;" aria-hidden="true">apartment</i>
+            <p style="font-size:15px;line-height:1.4;color:var(--primary);">таксопарки-посредники как канал масштабирования</p>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:10px;margin-top:11px;">
+            <i class="material-icons attn" style="font-size:19px;line-height:1.4;" aria-hidden="true">warning</i>
+            <p style="font-size:15px;line-height:1.4;color:var(--primary);">страх (карточка качества, приоритеты, штрафы) как инструмент удержания</p>
+          </div>
+        </section>
+
+        <!-- Центр: подпись-стрелка -->
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:11px;border-left:1px solid var(--line);border-right:1px solid var(--line);padding:0 18px;">
+          <div style="width:46px;height:46px;border-radius:999px;border:1px solid rgba(245,158,11,.45);background:var(--amber-dim);display:flex;align-items:center;justify-content:center;">
+            <i class="material-icons attn" style="font-size:24px;" aria-hidden="true">trending_down</i>
+          </div>
+          <p style="font-size:13.5px;line-height:1.5;font-weight:600;color:var(--primary);text-align:center;">повторить наш оффер = обрушить собственную экономику</p>
+        </div>
+
+        <!-- Правая чаша: наш оффер -->
+        <section class="card-accent" style="border-radius:18px;display:flex;flex-direction:column;padding:20px 24px;">
+          <div class="lbl" style="color:var(--accent);">Наш оффер</div>
+          <div class="num hero-num" style="color:var(--accent);margin-top:8px;">12%</div>
+          <div class="hairline" style="margin:14px 0 12px;"></div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <i class="material-icons tick" style="font-size:19px;" aria-hidden="true">check_circle</i>
+            <p style="font-size:15px;font-weight:600;color:var(--primary);">без парка</p>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:12px;">
+            <i class="material-icons tick" style="font-size:19px;" aria-hidden="true">check_circle</i>
+            <p style="font-size:15px;font-weight:600;color:var(--primary);">налог с чистого</p>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:12px;">
+            <i class="material-icons tick" style="font-size:19px;" aria-hidden="true">check_circle</i>
+            <p style="font-size:15px;font-weight:600;color:var(--primary);">отказ без штрафа</p>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Три аргумента -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+      <div class="card argcard">
+        <div class="argnum">01</div>
+        <p class="argtext"><b>Скопировать 12%</b> — значит списать десятки миллиардов выручки</p>
+      </div>
+      <div class="card argcard">
+        <div class="argnum">02</div>
+        <p class="argtext"><b>Отказаться от таксопарков</b> — значит сломать канал привлечения водителей</p>
+      </div>
+      <div class="card argcard">
+        <div class="argnum">03</div>
+        <p class="argtext"><b>Отменить страх</b> — значит отпустить водителей к нам без чувства ловушки</p>
+      </div>
+    </div>
+
+    <!-- Вывод -->
+    <div style="display:flex;align-items:center;gap:18px;">
+      <div class="hairline" style="flex:1;"></div>
+      <h3 style="font-family:var(--font-heading);font-weight:700;font-size:19px;color:var(--primary);white-space:nowrap;">Мы не отбираем рынок рекламой. Мы делаем их модель <span class="attn">дороже нашей</span></h3>
+      <div class="hairline" style="flex:1;"></div>
+    </div>
+
+  </div>
+</div>
+<aside data-notes class="hidden">
+  <ul>
+    <li>Ключ: монополист не может скопировать наш оффер, не обрушив собственную экономику — это ров бизнес-модели, а не фича.</li>
+    <li>24%+ кормят его P&amp;L: повторить наши 12% — значит списать десятки миллиардов выручки.</li>
+    <li>Таксопарки — их канал привлечения водителей; отказаться от них — сломать масштабирование.</li>
+    <li>Страх (карточка качества, приоритеты, штрафы) держит водителей в ловушке — мы страх убрали.</li>
+    <li>Вывод: мы не отбираем рынок рекламой — мы делаем их модель дороже нашей.</li>
+  </ul>
+</aside>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>ПРЯМО · 06 · Продукт и трекшн</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="global.css">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+  .h1{font-family:var(--font-heading);font-weight:900;font-size:42px;line-height:1.1;letter-spacing:-.01em;color:var(--primary);}
+  .lbl{font-family:var(--font-num);font-size:11px;font-weight:500;letter-spacing:.3em;text-transform:uppercase;}
+  .cardtitle{font-family:var(--font-heading);font-weight:700;font-size:16.5px;color:var(--primary);}
+  .step{font-family:var(--font-num);font-size:12px;color:var(--primary);border:1px solid var(--line);border-radius:999px;padding:4px 11px;background:rgba(255,255,255,.02);white-space:nowrap;}
+  .arr{font-family:var(--font-num);font-size:13px;color:var(--secondary);}
+  .ministep{font-family:var(--font-num);font-size:11px;color:var(--primary);border:1px solid var(--line);border-radius:999px;padding:3px 9px;background:rgba(255,255,255,.02);white-space:nowrap;}
+  @keyframes livepulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(.86);}}
+  .pulse{animation:livepulse 1.8s ease-in-out infinite;}
+</style>
+</head>
+<body>
+<div class="slide">
+  <div style="height:100%;display:flex;flex-direction:column;padding:54px 60px 44px;">
+
+    <!-- Шапка -->
+    <div class="kicker">ПРОДУКТ УЖЕ РАБОТАЕТ</div>
+    <h1 class="h1" style="margin-top:10px;">Не слайды — работающий продукт</h1>
+
+    <!-- Крупные цифры-акценты -->
+    <div style="display:flex;align-items:center;gap:26px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:11px 4px;margin-top:16px;">
+      <div style="display:flex;align-items:baseline;gap:10px;">
+        <span class="num" style="font-size:30px;font-weight:800;color:var(--primary);">2</span>
+        <span style="font-size:14px;color:var(--secondary);">приложения</span>
+      </div>
+      <div style="width:1px;height:34px;background:var(--line);"></div>
+      <div style="display:flex;align-items:baseline;gap:10px;">
+        <span class="num" style="font-size:30px;font-weight:800;color:var(--primary);">1</span>
+        <span style="font-size:14px;color:var(--secondary);">основатель</span>
+      </div>
+      <div style="width:1px;height:34px;background:var(--line);"></div>
+      <div style="display:flex;align-items:baseline;gap:10px;">
+        <span class="num" style="font-size:30px;font-weight:800;color:var(--accent);">0</span>
+        <span style="font-size:14px;color:var(--secondary);">внешних разработчиков</span>
+      </div>
+    </div>
+
+    <!-- Bento-сетка -->
+    <div style="display:grid;grid-template-columns:repeat(12,1fr);grid-template-rows:156px minmax(0,1fr) 58px;gap:14px;margin-top:18px;flex:1;min-height:0;">
+
+      <!-- MVP end-to-end -->
+      <section class="card" style="grid-column:span 8;display:flex;flex-direction:column;justify-content:center;gap:9px;padding:16px 22px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <i class="material-icons tick" style="font-size:20px;" aria-hidden="true">apps</i>
+          <h2 class="cardtitle">MVP приложений пассажира и водителя</h2>
+        </div>
+        <p style="font-size:13.5px;color:var(--secondary);">сквозной цикл подтверждён end-to-end:</p>
+        <div style="display:flex;align-items:center;gap:7px;">
+          <span class="step">заказ</span><span class="arr">→</span>
+          <span class="step">лента</span><span class="arr">→</span>
+          <span class="step">приём</span><span class="arr">→</span>
+          <span class="step">поездка</span><span class="arr">→</span>
+          <span class="step">чек</span><span class="arr">→</span>
+          <span class="step">рейтинг</span><span class="arr">→</span>
+          <span class="step">чаевые</span>
+        </div>
+      </section>
+
+      <!-- Движок диспетчеризации -->
+      <section class="card" style="grid-column:span 4;display:flex;flex-direction:column;justify-content:center;gap:10px;padding:16px 20px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <i class="material-icons tick pulse" style="font-size:22px;" aria-hidden="true">wifi_tethering</i>
+          <h2 class="cardtitle">Движок диспетчеризации</h2>
+        </div>
+        <p style="font-size:14px;line-height:1.5;color:var(--secondary);">живое демо на <span class="num" style="color:var(--primary);">WebSocket</span> — <span style="color:var(--primary);font-weight:700;">можно открыть прямо сейчас</span></p>
+      </section>
+
+      <!-- Матрёшка 6-в-1 -->
+      <section class="card-accent" style="grid-column:span 5;border-radius:18px;display:flex;flex-direction:column;justify-content:center;gap:9px;padding:16px 22px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="lbl" style="color:var(--accent);">Матрёшка</span>
+          <span class="chip chip-accent" style="font-size:10.5px;padding:2px 9px;letter-spacing:.12em;">ТРИЗ</span>
+        </div>
+        <div class="num" style="font-size:40px;font-weight:800;color:var(--accent);line-height:1;letter-spacing:-.03em;">6-в-1</div>
+        <p style="font-size:13px;line-height:1.45;color:var(--secondary);">лента + навигатор на выбор (2ГИС/OSM/Яндекс) + путевой лист + медосмотр + налоговый реестр + карта спроса</p>
+        <div><span class="ministep">офлайн-буфер 15 минут</span></div>
+      </section>
+
+      <!-- 5 платформ -->
+      <section class="card" style="grid-column:span 3;display:flex;flex-direction:column;justify-content:center;gap:11px;padding:16px 18px;">
+        <div style="display:flex;align-items:baseline;gap:9px;">
+          <span class="num" style="font-size:38px;font-weight:800;color:var(--primary);line-height:1;">5</span>
+          <span style="font-size:13px;color:var(--secondary);">платформ</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          <span class="ministep">App Store</span>
+          <span class="ministep">Google Play</span>
+          <span class="ministep">RuStore</span>
+          <span class="ministep">APK</span>
+          <span class="ministep">PWA</span>
+        </div>
+      </section>
+
+      <!-- Лендинг -->
+      <section class="card" style="grid-column:span 4;display:flex;flex-direction:column;justify-content:center;gap:9px;padding:16px 20px;">
+        <span class="lbl" style="color:var(--secondary);">Лендинг</span>
+        <div style="display:flex;align-items:baseline;gap:9px;">
+          <span class="num" style="font-size:38px;font-weight:800;color:var(--primary);line-height:1;">23</span>
+          <span style="font-size:13px;color:var(--secondary);">секции</span>
+        </div>
+        <p style="font-size:13.5px;color:var(--secondary);">живая экономика и калькуляторы</p>
+      </section>
+
+      <!-- Лист ожидания + сноска -->
+      <section class="card-accent" style="grid-column:span 12;border-radius:18px;display:flex;align-items:center;gap:16px;padding:0 22px;">
+        <i class="material-icons tick" style="font-size:22px;" aria-hidden="true">group_add</i>
+        <span style="font-size:15.5px;font-weight:800;color:var(--accent-soft);white-space:nowrap;">Лист ожидания открыт</span>
+        <div style="width:1px;height:26px;background:rgba(16,185,129,.35);"></div>
+        <p style="flex:1;text-align:right;font-size:11.5px;color:var(--secondary);">Продукт построен соло-основателем за счёт дисциплины ТОС/ТРИЗ: матрёшка, верёвка, мафия-оффер</p>
+      </section>
+
+    </div>
+  </div>
+</div>
+<aside data-notes class="hidden">
+  <ul>
+    <li>Предложить инвестору открыть живое демо движка на WebSocket на его телефоне прямо на встрече.</li>
+    <li>Пройти цепочку MVP end-to-end: заказ → лента → приём → поездка → чек → рейтинг → чаевые.</li>
+    <li>«Матрёшка 6-в-1» по ТРИЗ — вот как соло-основатель успел: одна база закрывает шесть функций, офлайн-буфер 15 минут.</li>
+    <li>5 платформ и PWA — покрытие без раздутой команды: 2 приложения · 1 основатель · 0 внешних разработчиков.</li>
+    <li>Лист ожидания уже открыт — спрос проверяем до раунда, лендинг с живыми калькуляторами.</li>
+  </ul>
+</aside>
+</body>
+</html>

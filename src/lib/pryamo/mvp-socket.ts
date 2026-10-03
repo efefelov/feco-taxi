@@ -9,6 +9,7 @@ import type {
   RideDTO,
   RideDriver,
   WeekDay,
+  ZoneDTO,
 } from '@/lib/pryamo/types'
 
 /**
@@ -32,6 +33,7 @@ export interface MvpPassengerHandlers {
 export function useMvpPassenger(handlers: MvpPassengerHandlers) {
   const socketRef = useRef<Socket | null>(null)
   const [connected, setConnected] = useState(false)
+  const [zones, setZones] = useState<ZoneDTO[]>([])
   const handlersRef = useRef(handlers)
 
   useEffect(() => {
@@ -60,6 +62,9 @@ export function useMvpPassenger(handlers: MvpPassengerHandlers) {
     s.on('ride:rated', (d: { ok: boolean; message: string }) => handlersRef.current.onRated(d.message))
     s.on('ride:failed', (d: { reason: string }) => handlersRef.current.onFailed(d.reason))
     s.on('ride:cancelled', (d: { ok: boolean }) => handlersRef.current.onCancelled(d.ok))
+    // спрос по зонам: движок рассылает demand:state всем сокетам каждые ~5 с —
+    // из него форма заказа берёт живой коэффициент для зоны подачи
+    s.on('demand:state', (d: { zones: ZoneDTO[] }) => setZones(d.zones ?? []))
     return () => {
       s.disconnect()
       socketRef.current = null
@@ -82,7 +87,7 @@ export function useMvpPassenger(handlers: MvpPassengerHandlers) {
     socketRef.current?.emit('ride:rate', payload)
   }, [])
 
-  return { book, cancel, rate, connected }
+  return { book, cancel, rate, connected, zones }
 }
 
 export interface MvpDriverHandlers {

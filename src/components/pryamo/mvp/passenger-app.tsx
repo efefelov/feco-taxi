@@ -27,6 +27,9 @@ import {
   AlertTriangle,
   Gift,
   X,
+  Flame,
+  Activity,
+  HardDrive,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,6 +38,12 @@ import { toast } from '@/hooks/use-toast'
 import { CityMap } from '../demo/city-map'
 import { useMvpPassenger } from '@/lib/pryamo/mvp-socket'
 import { estimatePrice, rub, minutesWord } from '@/lib/pryamo/format'
+import {
+  PASSENGER_HISTORY_LIMIT,
+  loadPassengerHistory,
+  savePassengerHistory,
+} from '@/lib/pryamo/mvp-storage'
+import { pickupDemand, surgeLabel } from '@/lib/pryamo/pickup-zone'
 import type { Receipt, RideDTO, Tariff } from '@/lib/pryamo/types'
 
 const ADDRESS_PRESETS = [
@@ -90,7 +99,17 @@ export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
   const [ride, setRide] = useState<RideDTO | null>(null)
   const [receipt, setReceipt] = useState<Receipt | null>(null)
   const [failReason, setFailReason] = useState<string | null>(null)
-  const [history, setHistory] = useState<PassengerHistoryItem[]>([])
+  // Персистентность истории: оверлей MVP рендерится только на клиенте (при SSR
+  // и гидратации он закрыт), поэтому ленивый инициализатор читает localStorage
+  // ровно один раз при монтировании — без рассинхрона разметки; запись — эффектом
+  const [initialHistory] = useState(() => loadPassengerHistory())
+  const [history, setHistory] = useState<PassengerHistoryItem[]>(initialHistory)
+  /** История восстановлена из localStorage этого устройства */
+  const restored = initialHistory.length > 0
+
+  useEffect(() => {
+    savePassengerHistory(history)
+  }, [history])
 
   // Рейтинг 2.0 по осям + чаевые
   const [axes, setAxes] = useState({ punctuality: 5, driving: 5, comfort: 5, cleanliness: 5 })
@@ -114,7 +133,7 @@ export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
       .catch(() => {})
   }, [])
 
-  const { book, cancel, rate, connected } = useMvpPassenger({
+  const { book, cancel, rate, connected, zones } = useMvpPassenger({
     onRideState: (r) => {
       setRide(r)
       setFailReason(null)
@@ -127,7 +146,10 @@ export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
       setScreen('receipt')
       setTab('ride')
       setHistory((prev) =>
-        [{ ride: r, receipt: rec, rated: false, tip: 0, at: Date.now() }, ...prev].slice(0, 20)
+        [
+          { ride: r, receipt: rec, rated: false, tip: 0, at: Date.now() },
+          ...prev,
+        ].slice(0, PASSENGER_HISTORY_LIMIT)
       )
     },
     onRated: (message) => {
@@ -171,6 +193,9 @@ export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
     () => (tariff ? estimatePrice(tariff, distanceKm, durationMin) : 0),
     [tariff, distanceKm, durationMin]
   )
+
+  // Живой спрос зоны подачи: demand:state прилетает каждые ~5 с
+  const demand = useMemo(() => pickupDemand(zones, from), [zones, from])
 
   const randomize = () => {
     const f = ADDRESS_PRESETS[Math.floor(Math.random() * ADDRESS_PRESETS.length)]
@@ -416,6 +441,43 @@ export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
                           </span>
                         </div>
                       </div>
+
+                      {/* Индикатор спроса зоны подачи (обновляется каждые ~5 с) */}
+                      {demand && (
+                        <div className="mt-2.5 border-t border-emerald-500/15 pt-2.5">
+                          <span
+                            className={cn(
+                              'inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold leading-snug',
+                              demand.surge > 1
+                                ? 'border-amber-400/40 bg-amber-400/10 text-amber-300'
+                                : 'border-zinc-700 bg-zinc-950/60 text-zinc-400'
+                            )}
+                            title={`Зона подачи: ${demand.name} · спрос ${demand.demand}%`}
+                          >
+                            {demand.surge > 1 ? (
+                              <Flame className="h-3.5 w-3.5 shrink-0 text-amber-400" aria-hidden />
+                            ) : (
+                              <Activity className="h-3.5 w-3.5 shrink-0 text-zinc-500" aria-hidden />
+                            )}
+                            <span className="min-w-0">
+                              <span className="sr-only">
+                                Зона подачи: {demand.name}, спрос {demand.demand}%.{' '}
+                              </span>
+                              {demand.surge > 1 ? (
+                                <>
+                                  Спрос <span className="tabular-nums">×{surgeLabel(demand.surge)}</span> ·
+                                  кап <span className="tabular-nums">×1,5</span> — весь коэффициент
+                                  водителю
+                                </>
+                              ) : (
+                                <>
+                                  Пиков нет — коэффициент <span className="tabular-nums">1,0</span>
+                                </>
+                              )}
+                            </span>
+                          </span>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -719,6 +781,12 @@ export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
         {tab === 'history' && (
           <div className="p-4">
             <h2 className="text-base font-black text-white">История поездок</h2>
+            {restored && history.length > 0 && (
+              <p className="mt-1 flex items-center gap-1.5 text-[10px] text-zinc-600">
+                <HardDrive className="h-3 w-3 shrink-0" aria-hidden />
+                история сохранена на этом устройстве
+              </p>
+            )}
             {history.length === 0 ? (
               <div className="mt-6 flex flex-col items-center gap-2 rounded-2xl border border-dashed border-zinc-800 p-8 text-center">
                 <History className="h-8 w-8 text-zinc-700" aria-hidden />

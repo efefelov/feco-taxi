@@ -1,0 +1,85 @@
+/* ПРЯМО · Demo Day Pitch — общий стиль деки
+   Палитра: тёмный zinc + emerald (деньги водителю) + amber (внимание/риски). Синий запрещён. */
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap');
+
+:root {
+  /* палитра */
+  --bg: #18181B;
+  --bg-deep: #101013;
+  --surface: #212125;
+  --surface-2: #27272C;
+  --line: #3A3A42;
+  --primary: #FAFAFA;
+  --secondary: #A1A1AA;
+  --muted: #6E6E78;
+  --accent: #10B981;
+  --accent-soft: #34D399;
+  --accent-dim: rgba(16, 185, 129, 0.12);
+  --amber: #F59E0B;
+  --amber-dim: rgba(245, 158, 11, 0.12);
+  --rose: #F87171;
+
+  /* типографика — только токены */
+  --font-heading: 'Unbounded', 'Manrope', sans-serif;
+  --font-body: 'Manrope', sans-serif;
+  --font-num: 'JetBrains Mono', monospace;
+  --fs-display: 88px;
+  --fs-h1: 54px;
+  --fs-h2: 34px;
+  --fs-h3: 22px;
+  --fs-body: 17px;
+  --fs-small: 14px;
+  --fs-micro: 11.5px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { background: var(--bg-deep); }
+
+.slide {
+  width: 1280px;
+  height: 720px;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg);
+  color: var(--primary);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+}
+
+/* поверхности */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+}
+.card-deep { background: var(--surface-2); }
+.card-accent { background: var(--accent-dim); border: 1px solid rgba(16,185,129,.35); }
+.card-amber { background: var(--amber-dim); border: 1px solid rgba(245,158,11,.35); }
+
+/* акцентные детали */
+.tick { color: var(--accent); }
+.attn { color: var(--amber); }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.kicker {
+  font-family: var(--font-num);
+  font-size: var(--fs-micro);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.kicker-amber { color: var(--amber); }
+.hairline { height: 1px; background: var(--line); }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--line); border-radius: 999px;
+  padding: 5px 14px; font-size: var(--fs-small); color: var(--secondary);
+  background: rgba(255,255,255,0.02);
+}
+.chip-accent { border-color: rgba(16,185,129,.45); color: var(--accent-soft); }
+.chip-amber { border-color: rgba(245,158,11,.45); color: var(--amber); }
+
+/* служебное */
+.hidden { display: none; }
+[data-notes] { display: none; }

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>ПРЯМО · 09 · Город-домино: плотность раньше масштаба</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="global.css">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+  .domino{flex:1;display:flex;flex-direction:column;padding:20px 22px;height:238px;}
+  .tile{width:38px;height:38px;flex:none;border:1px solid var(--line);border-radius:11px;display:flex;align-items:center;justify-content:center;font-family:var(--font-num);font-size:14px;font-weight:700;color:var(--secondary);background:rgba(255,255,255,.02);}
+  .d-arrow{flex:none;align-self:flex-start;width:46px;height:46px;margin-top:96px;border:1px solid rgba(16,185,129,.4);border-radius:999px;background:var(--surface);display:flex;align-items:center;justify-content:center;color:var(--accent);}
+  .stat-label{font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--secondary);}
+</style>
+</head>
+<body>
+<div class="slide">
+  <!-- декор: призрак цифры экспансии -->
+  <div data-decor aria-hidden="true" class="num" style="position:absolute;top:30px;right:58px;font-size:150px;font-weight:800;line-height:1;color:rgba(250,250,250,.04);z-index:0;">5–7</div>
+
+  <div style="position:relative;z-index:1;height:100%;display:flex;flex-direction:column;padding:46px 64px 34px;">
+
+    <!-- шапка -->
+    <div class="kicker">GO-TO-MARKET</div>
+    <h1 style="margin-top:12px;font-family:var(--font-heading);font-weight:700;font-size:42px;line-height:1.18;letter-spacing:-.01em;color:var(--primary);">
+      Город-домино: <span style="color:var(--accent);">плотность</span><br>раньше масштаба
+    </h1>
+
+    <!-- цепочка домино -->
+    <div style="margin-top:24px;display:flex;gap:12px;height:238px;">
+      <div class="card domino">
+        <div class="tile num">01</div>
+        <div style="margin-top:16px;display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;">
+          <span class="num" style="font-size:36px;font-weight:800;line-height:1.1;color:var(--primary);">1</span>
+          <span style="font-family:var(--font-heading);font-weight:700;font-size:16.5px;color:var(--primary);">город-миллионник</span>
+        </div>
+        <div style="margin-top:5px;font-size:13px;color:var(--secondary);">(не Москва)</div>
+        <div style="margin-top:16px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">
+          <span class="num" style="font-size:24px;font-weight:700;color:var(--accent);">1 000</span>
+          <span style="font-size:12.5px;color:var(--secondary);">водителей-основателей</span>
+        </div>
+        <div style="margin-top:auto;">
+          <span class="chip chip-accent" style="font-size:12px;padding:5px 13px;font-weight:600;">0% на 3 месяца</span>
+        </div>
+      </div>
+
+      <div class="d-arrow"><i class="material-icons" style="font-size:24px;">east</i></div>
+
+      <div class="card domino">
+        <div class="tile num">02</div>
+        <div style="margin-top:16px;font-family:var(--font-heading);font-weight:700;font-size:16.5px;color:var(--primary);">Ликвидность</div>
+        <div style="margin-top:5px;font-size:13px;color:var(--secondary);"><span class="num" style="font-weight:700;color:var(--primary);">2 недели</span> подряд</div>
+        <div style="margin-top:16px;display:flex;">
+          <div style="padding-right:20px;">
+            <div class="stat-label">ETA</div>
+            <div class="num" style="margin-top:6px;font-size:26px;font-weight:700;color:var(--primary);">≤ 7 мин</div>
+          </div>
+          <div style="border-left:1px solid var(--line);padding-left:20px;">
+            <div class="stat-label">Выполнение</div>
+            <div class="num" style="margin-top:6px;font-size:26px;font-weight:700;color:var(--primary);">≥ 80%</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-arrow"><i class="material-icons" style="font-size:24px;">east</i></div>
+
+      <div class="card domino">
+        <div class="tile num">03</div>
+        <div style="margin-top:16px;display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;">
+          <span class="num" style="font-size:36px;font-weight:800;line-height:1.1;color:var(--primary);">5–7</span>
+          <span style="font-family:var(--font-heading);font-weight:700;font-size:16.5px;color:var(--primary);">городов</span>
+          <span style="font-size:12.5px;color:var(--secondary);">плейбуком</span>
+        </div>
+        <div style="margin-top:5px;font-size:13px;font-weight:600;color:var(--primary);">каждый следующий дешевле</div>
+        <div style="margin-top:auto;">
+          <span class="chip chip-amber" style="font-size:12px;padding:5px 13px;font-weight:600;">цель <span class="num" style="font-weight:700;">−30%</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- правило верёвки -->
+    <div class="card-amber" style="margin-top:18px;height:64px;display:flex;align-items:center;gap:14px;padding:0 22px;">
+      <i class="material-icons" style="font-size:20px;color:var(--amber);">link</i>
+      <span style="font-family:var(--font-heading);font-weight:700;font-size:13px;color:var(--amber);white-space:nowrap;">ПРАВИЛО ВЁРОВКИ</span>
+      <span style="width:1px;height:26px;background:rgba(245,158,11,.35);flex:none;"></span>
+      <p style="font-size:14px;color:var(--secondary);line-height:1.4;">
+        <span style="color:var(--primary);font-weight:700;">Дисциплина экспансии: район за районом</span> — не расширяем гео, пока <span style="color:var(--primary);font-weight:700;">ETA не стабилен</span> (анти-спешка и в маркетинге)
+      </p>
+    </div>
+
+    <!-- метрики запуска -->
+    <div style="margin-top:20px;display:flex;height:138px;">
+      <div style="flex:1;padding-right:20px;">
+        <div class="stat-label">CAC рефералки</div>
+        <div style="margin-top:8px;display:flex;align-items:baseline;gap:7px;">
+          <span class="num" style="font-size:30px;font-weight:800;color:var(--accent);letter-spacing:-.01em;">9%</span>
+          <span style="font-size:14px;font-weight:600;color:var(--primary);">от маржи</span>
+        </div>
+        <div style="margin-top:8px;font-size:11.5px;color:var(--secondary);line-height:1.45;"><span class="num" style="color:var(--primary);font-weight:600;">5 400 ₽</span> против <span class="num" style="color:var(--primary);font-weight:600;">59 400 ₽</span> за 6 мес — платится постфактум</div>
+      </div>
+      <div style="flex:1;border-left:1px solid var(--line);padding:0 20px;">
+        <div class="stat-label">Приглашение пассажира</div>
+        <div class="num" style="margin-top:8px;font-size:30px;font-weight:800;color:var(--primary);letter-spacing:-.01em;">300 ₽</div>
+        <div style="margin-top:8px;font-size:12.5px;color:var(--secondary);">окупаемость <span style="color:var(--primary);font-weight:700;">6 поездок</span></div>
+      </div>
+      <div style="flex:1;border-left:1px solid var(--line);padding:0 20px;">
+        <i class="material-icons" style="font-size:22px;color:var(--accent);">hub</i>
+        <div style="margin-top:9px;font-size:15px;font-weight:700;color:var(--primary);line-height:1.4;">корпоративные якоря</div>
+        <div style="margin-top:3px;font-size:15px;font-weight:700;color:var(--primary);">+ API для таксопарков</div>
+      </div>
+      <div style="flex:1;border-left:1px solid var(--line);padding-left:20px;">
+        <div class="stat-label">Запуск города в bootstrap</div>
+        <div class="num" style="margin-top:8px;font-size:27px;font-weight:800;color:var(--primary);letter-spacing:-.01em;">0,5–0,9 млн ₽</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<aside data-notes class="hidden">
+  <ul>
+    <li>Стартуем в одном городе-миллионнике (не Москва): 1 000 водителей-основателей, 0% на 3 месяца.</li>
+    <li>Ликвидность считаем достигнутой, когда 2 недели подряд ETA ≤ 7 мин и выполнение ≥ 80% — только потом идём дальше.</li>
+    <li>Дальше 5–7 городов плейбуком: каждый следующий дешевле, цель −30% к стоимости запуска.</li>
+    <li>Правило верёвки: район за районом — не расширяем гео, пока ETA не стабилен; анти-спешка и в маркетинге.</li>
+    <li>Юниты GTM: CAC рефералки 9% от маржи (5 400 ₽ против 59 400 ₽ за 6 мес, платится постфактум); приглашение пассажира 300 ₽ окупается 6 поездками; запуск города 0,5–0,9 млн ₽ в bootstrap.</li>
+  </ul>
+</aside>
+</body>
+</html>
