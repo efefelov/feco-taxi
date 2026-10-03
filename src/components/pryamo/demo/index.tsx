@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Play, User, CarFront } from 'lucide-react'
+import { Play, User, CarFront, Smartphone, ArrowRight } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { PassengerDemo } from './passenger-demo'
 import { DriverDemo } from './driver-demo'
+import { openMvpApp } from '@/components/pryamo/mvp'
 
 export function DemoSection() {
   const [tab, setTab] = useState('passenger')
@@ -69,6 +70,29 @@ export function DemoSection() {
             </TabsContent>
           </Tabs>
         </div>
+
+        {/* Мостик к MVP-приложению */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-40px' }}
+          transition={{ duration: 0.5 }}
+          className="mx-auto mt-10 flex max-w-3xl flex-col items-center justify-between gap-4 rounded-2xl border border-amber-400/25 bg-gradient-to-r from-amber-400/8 via-zinc-900/60 to-zinc-900/60 px-6 py-5 sm:flex-row"
+        >
+          <p className="max-w-xl text-sm leading-relaxed text-zinc-400">
+            <span className="font-bold text-white">Хотите глубже?</span> Открыт MVP-прототип
+            обоих приложений: пассажир заказывает — водитель в соседней вкладке берёт заказ из
+            живой ленты. Смена ролей без перезагрузки.
+          </p>
+          <button
+            onClick={() => openMvpApp('passenger')}
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-amber-400 px-5 py-3 text-sm font-bold text-zinc-950 shadow-lg shadow-amber-400/20 transition-colors hover:bg-amber-300"
+          >
+            <Smartphone className="h-4.5 w-4.5" aria-hidden />
+            Открыть MVP
+            <ArrowRight className="h-4 w-4" aria-hidden />
+          </button>
+        </motion.div>
       </div>
     </section>
   )

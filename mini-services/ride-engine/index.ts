@@ -6,12 +6,14 @@
  *
  * Клиент -> сервер:
  *   driver:join, passenger:join, passenger:book, ride:rate,
- *   driver:accept, driver:decline, driver:go-online, driver:go-offline
+ *   driver:accept, driver:decline, driver:go-online, driver:go-offline,
+ *   mvp:book, mvp:cancel, driver:advance
  *
  * Сервер -> клиент:
  *   feed:state, orders:new, orders:remove, demand:state, stats:live,
  *   ride:state { ride, hint }, ride:completed, driver:earnings,
- *   driver:online, driver:accept-failed, ride:rated
+ *   driver:online, driver:accept-failed, ride:rated, driver:identity { driver },
+ *   ride:failed { rideId, reason }, ride:cancelled { ok }, mvp:booked { orderId, rideId }
  *
  * Примечания к DTO:
  *  - RideDTO.driver = null, пока статус 'searching' (водитель ещё не назначен).
@@ -466,6 +468,8 @@ const DRIVER_POOL: DriverInfo[] = Array.from({ length: 12 }, () => makeDriver())
 
 const MAX_FEED = 8
 const orders = new Map<string, OrderDTO>()
+/** MVP: orderId -> сокет пассажира, заказавшего поездку через mvp:book */
+const mvpOwners = new Map<string, string>()
 let orderCounter = 1000
 let rideCounter = 5000
 
@@ -525,30 +529,86 @@ function createOrder(): void {
   )
 }
 
-function removeOrder(id: string, reason: 'taken' | 'expired'): boolean {
+function removeOrder(id: string, reason: 'taken' | 'expired' | 'cancelled'): boolean {
   if (!orders.delete(id)) return false
   io.to('drivers').emit('orders:remove', { id, reason })
   return true
 }
 
-/** Жизнь заказа 35..60 сек, потом истекает */
+/** Остановить сессию поездки у всех её сокетов (отмена/срыв поиска) */
+function stopSession(session: RideSession): void {
+  if (session.timer) {
+    clearInterval(session.timer)
+    session.timer = null
+  }
+  for (const s of session.sockets) {
+    const c = clients.get(s.id)
+    if (c && c.session === session) c.session = null
+  }
+}
+
+/** Жизнь заказа 35..60 сек, потом истекает; MVP-заказ пассажира — 45..75 сек */
 function expireOrders(): void {
   const now = Date.now()
   for (const order of orders.values()) {
     if (now >= Date.parse(order.expiresAt)) {
+      const ownerSocketId = mvpOwners.get(order.id)
+      if (ownerSocketId) {
+        // заказ живого пассажира истёк, никого не нашли — честно сообщаем
+        mvpOwners.delete(order.id)
+        const ps = io.sockets.sockets.get(ownerSocketId)
+        const pc = ps ? clients.get(ps.id) : undefined
+        if (pc?.session && pc.session.mvpOrderId === order.id && pc.session.phase === 'searching') {
+          const rideId = pc.session.ride.id
+          stopSession(pc.session)
+          ps?.emit('ride:failed', { rideId, reason: 'expired' })
+        }
+      }
       removeOrder(order.id, 'expired')
       log(`заказ ${order.id} истёк`)
     }
   }
 }
 
-/** Другие водители иногда забирают заказы из ленты */
+/** Другие водители иногда забирают заказы из ленты; заказы живых пассажиров — приоритетно */
 function simulateOtherDriverTake(): void {
-  if (orders.size === 0 || Math.random() >= 0.35) return
-  const arr = [...orders.values()]
-  const order = arr[randInt(0, arr.length - 1)]
-  if (removeOrder(order.id, 'taken')) {
+  if (orders.size === 0) return
+  const mvpIds = [...orders.keys()].filter((id) => mvpOwners.has(id))
+  let order: OrderDTO | undefined
+  if (mvpIds.length > 0 && Math.random() < 0.55) {
+    order = orders.get(pick(mvpIds)) ?? undefined
+  } else {
+    if (Math.random() >= 0.35) return
+    const arr = [...orders.values()]
+    order = arr[randInt(0, arr.length - 1)]
+  }
+  if (!order) return
+  if (mvpOwners.has(order.id)) {
+    botAcceptMvpOrder(order)
+  } else if (removeOrder(order.id, 'taken')) {
     log(`заказ ${order.id} забрал другой водитель`)
+  }
+}
+
+/** Бот-водитель принимает MVP-заказ пассажира: назначаем водителя из пула */
+function botAcceptMvpOrder(order: OrderDTO): void {
+  const ownerSocketId = mvpOwners.get(order.id)
+  if (!ownerSocketId) return
+  mvpOwners.delete(order.id)
+  const ps = io.sockets.sockets.get(ownerSocketId)
+  const pc = ps ? clients.get(ps.id) : undefined
+  if (removeOrder(order.id, 'taken') && pc?.session && pc.session.mvpOrderId === order.id && pc.session.phase === 'searching') {
+    const session = pc.session
+    session.ride.driver = { ...pick(DRIVER_POOL) }
+    session.ride.status = 'arriving'
+    session.ride.progress = 0
+    session.ride.etaMin = randInt(3, 7)
+    session.arriveEtaStart = session.ride.etaMin
+    session.phase = 'arriving'
+    broadcastRideState(session)
+    log(`заказ ${order.id}: бот-водитель ${session.ride.driver.name} принял заказ пассажира`)
+  } else {
+    log(`заказ ${order.id} забрал другой водитель (пассажир уже ушёл)`)
   }
 }
 
@@ -595,71 +655,100 @@ const SEARCH_HINTS = [
 interface RideSession {
   ride: RideDTO
   timer: ReturnType<typeof setInterval> | null
-  perspective: 'passenger' | 'driver'
+  /** Все сокеты этой поездки (MVP: пассажир + водитель) — получают ride:state */
+  sockets: Socket[]
   phase: RideStatus | 'done'
   searchTicksLeft: number // тиков по 2 сек до назначения водителя (3..6 => 6..12 сек)
   hintIndex: number
   arriveEtaStart: number
   durationMin: number
+  /** MVP: заказ в общей ленте, из которого выросла поездка */
+  mvpOrderId: string | null
+  /** MVP-пассажир: не назначать водителя ботами по таймеру — ждём реального принятия */
+  noAutoAssign: boolean
 }
 
-function hintFor(session: RideSession): string {
+function hintFor(session: RideSession, perspective: 'passenger' | 'driver'): string {
   if (session.phase === 'searching') {
     return SEARCH_HINTS[session.hintIndex % SEARCH_HINTS.length]()
   }
   if (session.phase === 'arriving') {
-    return session.perspective === 'driver' ? 'Вы едете к пассажиру' : 'Водитель выехал к вам'
+    return perspective === 'driver' ? 'Вы едете к пассажиру' : 'Водитель выехал к вам'
   }
   if (session.phase === 'onboard') {
-    return session.perspective === 'driver'
+    return perspective === 'driver'
       ? 'Пассажир в салоне, следуйте к точке назначения'
       : 'Вы в пути'
   }
   return 'Поездка завершена'
 }
 
-function emitRideState(socket: Socket, session: RideSession): void {
-  socket.emit('ride:state', { ride: session.ride, hint: hintFor(session) })
+/** ride:state всем сокетам сессии — каждому своя перспектива в подсказке */
+function broadcastRideState(session: RideSession): void {
+  for (const s of session.sockets) {
+    if (s.disconnected) continue
+    const c = clients.get(s.id)
+    const perspective: 'passenger' | 'driver' = c?.role === 'driver' ? 'driver' : 'passenger'
+    s.emit('ride:state', {
+      ride: { ...session.ride, driver: session.ride.driver ? { ...session.ride.driver } : null },
+      hint: hintFor(session, perspective),
+    })
+  }
+}
+
+interface LifecycleOpts {
+  mvpOrderId?: string | null
+  noAutoAssign?: boolean
 }
 
 function startRideLifecycle(
-  socket: Socket,
+  sockets: Socket[],
   ride: RideDTO,
-  perspective: 'passenger' | 'driver',
   durationMin: number,
+  opts?: LifecycleOpts,
 ): void {
-  const client = clients.get(socket.id)
-  if (!client) return
-  if (client.session?.timer) {
-    clearInterval(client.session.timer)
-    log(`поездка ${client.session.ride.id} прервана (новая поездка)`)
+  const noAutoAssign = opts?.noAutoAssign ?? false
+  // прерываем предыдущие сессии каждого сокета
+  for (const s of sockets) {
+    const client = clients.get(s.id)
+    if (!client) continue
+    if (client.session?.timer) {
+      clearInterval(client.session.timer)
+      log(`поездка ${client.session.ride.id} прервана (новая поездка)`)
+    }
   }
   const session: RideSession = {
     ride,
     timer: null,
-    perspective,
+    sockets: [...sockets],
     phase: ride.status,
-    searchTicksLeft: perspective === 'passenger' ? randInt(3, 6) : 0,
+    searchTicksLeft: noAutoAssign ? Number.MAX_SAFE_INTEGER : ride.status === 'searching' ? randInt(3, 6) : 0,
     hintIndex: 0,
     arriveEtaStart: ride.etaMin,
     durationMin,
+    mvpOrderId: opts?.mvpOrderId ?? null,
+    noAutoAssign,
   }
-  client.session = session
-  emitRideState(socket, session)
+  for (const s of sockets) {
+    const client = clients.get(s.id)
+    if (client) client.session = session
+  }
+  broadcastRideState(session)
   session.timer = setInterval(() => {
     try {
-      tickRide(socket, session)
+      tickRide(session)
     } catch (err) {
       log(`ошибка тика поездки: ${err instanceof Error ? err.message : String(err)}`)
     }
   }, 2000)
 }
 
-function tickRide(socket: Socket, session: RideSession): void {
+function tickRide(session: RideSession): void {
   const ride = session.ride
   if (session.phase === 'searching') {
     session.hintIndex += 1
-    emitRideState(socket, session)
+    broadcastRideState(session)
+    if (session.noAutoAssign) return // MVP: ждём реального водителя из ленты
     session.searchTicksLeft -= 1
     if (session.searchTicksLeft <= 0) {
       ride.driver = { ...pick(DRIVER_POOL) }
@@ -668,7 +757,7 @@ function tickRide(socket: Socket, session: RideSession): void {
       ride.etaMin = randInt(3, 7)
       session.phase = 'arriving'
       session.arriveEtaStart = ride.etaMin
-      emitRideState(socket, session)
+      broadcastRideState(session)
       log(`поездка ${ride.id}: назначен водитель ${ride.driver.name}, ${ride.driver.car}, подача ~${ride.etaMin} мин`)
     }
     return
@@ -682,7 +771,7 @@ function tickRide(socket: Socket, session: RideSession): void {
       session.phase = 'onboard'
       log(`поездка ${ride.id}: пассажир в салоне, в пути ${ride.etaMin} мин`)
     }
-    emitRideState(socket, session)
+    broadcastRideState(session)
     return
   }
   if (session.phase === 'onboard') {
@@ -693,9 +782,9 @@ function tickRide(socket: Socket, session: RideSession): void {
       ride.etaMin = 0
       ride.status = 'completed'
       session.phase = 'done'
-      completeRide(socket, session)
+      completeRide(session)
     } else {
-      emitRideState(socket, session)
+      broadcastRideState(session)
     }
     return
   }
@@ -705,7 +794,7 @@ function tickRide(socket: Socket, session: RideSession): void {
   }
 }
 
-function completeRide(socket: Socket, session: RideSession): void {
+function completeRide(session: RideSession): void {
   const ride = session.ride
   if (session.timer) {
     clearInterval(session.timer)
@@ -719,28 +808,35 @@ function completeRide(socket: Socket, session: RideSession): void {
     commissionRub: price - payout,
     tip: 0,
   }
-  socket.emit('ride:completed', {
-    ride: { ...ride, driver: ride.driver ? { ...ride.driver } : null },
-    receipt,
-  })
+  for (const s of session.sockets) {
+    if (s.disconnected) continue
+    s.emit('ride:completed', {
+      ride: { ...ride, driver: ride.driver ? { ...ride.driver } : null },
+      receipt,
+    })
+  }
   stats.completedToday += 1
   stats.grossTodayRub += price
   log(`поездка ${ride.id}: завершена, ${price} руб (выплата водителю ${payout})`)
-  const client = clients.get(socket.id)
-  if (client && client.role === 'driver' && client.earnings) {
-    client.earnings.gross += price
-    client.earnings.payout += payout
-    client.earnings.commission += price - payout
-    client.earnings.rides += 1
-    client.earnings.hoursOnline = round1(client.earnings.hoursOnline + 0.1)
-    client.week = syncWeekToday(client.week, client.earnings.gross)
-    client.lastRides.unshift({ ...ride, driver: ride.driver ? { ...ride.driver } : null })
-    client.lastRides = client.lastRides.slice(0, 5)
-    socket.emit('driver:earnings', {
-      today: { ...client.earnings },
-      week: client.week.map((d) => ({ ...d })),
-      lastRides: client.lastRides.map((r) => ({ ...r, driver: r.driver ? { ...r.driver } : null })),
-    })
+  // заработок обновляем у сокета-водителя этой сессии (если он есть — MVP-режим)
+  for (const s of session.sockets) {
+    const c = clients.get(s.id)
+    if (c && c.role === 'driver' && c.session === session && c.earnings) {
+      c.earnings.gross += price
+      c.earnings.payout += payout
+      c.earnings.commission += price - payout
+      c.earnings.rides += 1
+      c.earnings.hoursOnline = round1(c.earnings.hoursOnline + 0.1)
+      c.week = syncWeekToday(c.week, c.earnings.gross)
+      c.lastRides.unshift({ ...ride, driver: ride.driver ? { ...ride.driver } : null })
+      c.lastRides = c.lastRides.slice(0, 5)
+      s.emit('driver:earnings', {
+        today: { ...c.earnings },
+        week: c.week.map((d) => ({ ...d })),
+        lastRides: c.lastRides.map((r) => ({ ...r, driver: r.driver ? { ...r.driver } : null })),
+      })
+      break
+    }
   }
 }
 
@@ -877,6 +973,7 @@ io.on('connection', (socket: Socket) => {
       socket.emit('feed:state', { orders: [...orders.values()] })
       socket.emit('demand:state', { zones: zoneDTOs(), updatedAt: new Date().toISOString() })
       socket.emit('stats:live', { ...stats })
+      socket.emit('driver:identity', { driver: { ...client.identity } })
       socket.emit('driver:earnings', {
         today: { ...client.earnings },
         week: client.week.map((d) => ({ ...d })),
@@ -960,10 +1057,117 @@ io.on('connection', (socket: Socket) => {
         tariffName: tariff.name,
         startedAt: new Date().toISOString(),
       }
-      startRideLifecycle(socket, ride, 'passenger', durationMin)
+      startRideLifecycle([socket], ride, durationMin)
       log(
         `пассажир ${socket.id.slice(0, 8)} заказал: ${from.label} -> ${to.label} (${tariff.id}, ${priceTotal} руб)`,
       )
+    }),
+  )
+
+  socket.on(
+    'mvp:book',
+    safeArg<unknown>((raw) => {
+      // MVP-заказ: попадает в общую ленту водителей, сессия пассажира ждёт реального принятия
+      const p = isObj(raw)
+      const client = clients.get(socket.id)
+      if (!client) return
+      if (client.role === 'driver') void socket.leave('drivers')
+      client.role = 'passenger'
+      const fromRaw = typeof p.from === 'string' && p.from.trim() !== '' ? p.from.trim() : null
+      const toRaw = typeof p.to === 'string' && p.to.trim() !== '' ? p.to.trim() : null
+      const tariff = resolveTariff(typeof p.tariffId === 'string' ? p.tariffId : null)
+      const from = fromRaw ? resolveAddress(fromRaw) : randomAddress()
+      const to = toRaw ? resolveAddress(toRaw) : randomAddress(from.zoneId)
+      const distanceKm = round1(3 + 21 * Math.random() * Math.random())
+      const durationMin = round1(distanceKm * 2.2 + 4)
+      const surge = surgeForZone(from.zoneId)
+      const priceTotal = computePrice(tariff, distanceKm, durationMin, surge)
+      const driverPayout = Math.round(priceTotal * 0.88)
+      const ride: RideDTO = {
+        id: nextRideId(),
+        status: 'searching',
+        driver: null,
+        from,
+        to,
+        distanceKm,
+        etaMin: randInt(3, 6),
+        progress: 0,
+        priceTotal,
+        driverPayout,
+        tariffName: tariff.name,
+        startedAt: new Date().toISOString(),
+      }
+      // заказ — в общую ленту водителей, владелец — этот сокет
+      const createdAt = new Date()
+      const order: OrderDTO = {
+        id: nextOrderId(),
+        from,
+        to,
+        distanceKm,
+        durationMin,
+        tariff: { id: tariff.id, name: tariff.name, multiplier: round2(tariff.multiplier) },
+        priceTotal,
+        driverPayout,
+        commissionRub: priceTotal - driverPayout,
+        surge: round2(surge),
+        createdAt: createdAt.toISOString(),
+        expiresAt: new Date(createdAt.getTime() + randInt(45, 75) * 1000).toISOString(),
+        watchingDrivers: Math.round(clamp(6 + 10 + randInt(-2, 3), 3, 24)),
+      }
+      orders.set(order.id, order)
+      mvpOwners.set(order.id, socket.id)
+      io.to('drivers').emit('orders:new', { order })
+      startRideLifecycle([socket], ride, durationMin, { mvpOrderId: order.id, noAutoAssign: true })
+      socket.emit('mvp:booked', { orderId: order.id, rideId: ride.id })
+      log(
+        `MVP-заказ ${order.id}: ${from.label} -> ${to.label} (${tariff.id}, ${priceTotal} руб) — в ленте водителей`,
+      )
+    }),
+  )
+
+  socket.on(
+    'mvp:cancel',
+    safe(() => {
+      const client = clients.get(socket.id)
+      if (!client?.session) return
+      const session = client.session
+      if (session.phase !== 'searching') {
+        socket.emit('ride:cancelled', { ok: false, reason: 'already-riding' })
+        return
+      }
+      const orderId = session.mvpOrderId
+      stopSession(session)
+      if (orderId) {
+        mvpOwners.delete(orderId)
+        if (removeOrder(orderId, 'cancelled')) {
+          log(`пассажир ${socket.id.slice(0, 8)} отменил заказ ${orderId}`)
+        }
+      }
+      socket.emit('ride:cancelled', { ok: true })
+    }),
+  )
+
+  socket.on(
+    'driver:advance',
+    safe(() => {
+      // водитель подтверждает этап: посадку или завершение (без ожидания автотика)
+      const client = clients.get(socket.id)
+      if (!client?.session) return
+      const session = client.session
+      if (session.phase === 'arriving') {
+        session.ride.status = 'onboard'
+        session.ride.progress = 0.25
+        session.ride.etaMin = Math.max(1, Math.round(session.durationMin))
+        session.phase = 'onboard'
+        broadcastRideState(session)
+        log(`поездка ${session.ride.id}: водитель подтвердил посадку`)
+      } else if (session.phase === 'onboard') {
+        session.ride.progress = 1
+        session.ride.etaMin = 0
+        session.ride.status = 'completed'
+        session.phase = 'done'
+        completeRide(session)
+      }
     }),
   )
 
@@ -1005,6 +1209,32 @@ io.on('connection', (socket: Socket) => {
       // заказ удалён глобально, orders:remove получает и сам принимающий сокет
       io.to('drivers').emit('orders:remove', { id: orderId, reason: 'taken' })
       const identity = client.identity ?? makeDriver()
+
+      // MVP-ветка: заказ живого пассажира — связываем сессии обоих в одну поездку
+      const mvpOwnerSocketId = mvpOwners.get(orderId)
+      if (mvpOwnerSocketId) {
+        mvpOwners.delete(orderId)
+        const ps = io.sockets.sockets.get(mvpOwnerSocketId)
+        const pc = ps ? clients.get(ps.id) : undefined
+        if (ps && pc?.session && pc.session.mvpOrderId === orderId && pc.session.phase === 'searching') {
+          const session = pc.session
+          session.ride.driver = { ...identity }
+          session.ride.status = 'arriving'
+          session.ride.progress = 0
+          session.ride.etaMin = randInt(3, 7)
+          session.arriveEtaStart = session.ride.etaMin
+          session.phase = 'arriving'
+          session.sockets.push(socket)
+          client.session = session
+          broadcastRideState(session)
+          log(
+            `водитель ${socket.id.slice(0, 8)} (${identity.name}) принял MVP-заказ ${orderId}: связан с пассажиром ${mvpOwnerSocketId.slice(0, 8)}`,
+          )
+          return
+        }
+        // пассажир уже ушёл — превращаем в обычную поездку водителя (ниже)
+      }
+
       const ride: RideDTO = {
         id: nextRideId(),
         status: 'arriving',
@@ -1019,16 +1249,24 @@ io.on('connection', (socket: Socket) => {
         tariffName: order.tariff.name,
         startedAt: new Date().toISOString(),
       }
-      startRideLifecycle(socket, ride, 'driver', order.durationMin)
+      startRideLifecycle([socket], ride, order.durationMin)
       log(`водитель ${socket.id.slice(0, 8)} принял заказ ${orderId}: ${order.priceTotal} руб, выплата ${order.driverPayout}`)
     }),
   )
 
   socket.on('disconnect', () => {
     const client = clients.get(socket.id)
-    if (client?.session?.timer) {
-      clearInterval(client.session.timer)
-      log(`поездка ${client.session.ride.id} остановлена (клиент отключился)`)
+    if (client?.session) {
+      const session = client.session
+      client.session = null
+      // общая сессия (MVP): поездка живёт, пока жив хоть один участник
+      const alive = session.sockets.filter((s) => s.id !== socket.id && !s.disconnected)
+      if (alive.length === 0) {
+        if (session.timer) clearInterval(session.timer)
+        log(`поездка ${session.ride.id} остановлена (клиент отключился)`)
+      } else {
+        session.sockets = alive
+      }
     }
     clients.delete(socket.id)
     log(`отключение ${socket.id.slice(0, 8)} (клиентов: ${clients.size})`)

@@ -161,7 +161,7 @@ export function TariffsSection() {
 
 function TariffCard({ tariff, distanceKm, durationMin }: { tariff: Tariff; distanceKm: number; durationMin: number }) {
   const price = estimatePrice(tariff, distanceKm, durationMin)
-  const payout = Math.round(price * 0.92)
+  const payout = Math.round(price * 0.88)
   const isPopular = tariff.id === 'eco'
 
   const parts: string[] = []
@@ -232,7 +232,7 @@ function TariffCard({ tariff, distanceKm, durationMin }: { tariff: Tariff; dista
             <span className="text-xs font-medium text-zinc-500">водитель получит</span>
             <span className="text-sm font-bold tabular-nums text-emerald-700">
               {rub(payout)}
-              <span className="ml-1 text-[10px] font-semibold text-emerald-600/70">92%</span>
+              <span className="ml-1 text-[10px] font-semibold text-emerald-600/70">88%</span>
             </span>
           </div>
         </div>

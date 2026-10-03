@@ -23,7 +23,13 @@ interface CalculatorInput {
  */
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as CalculatorInput
+    let body: CalculatorInput = {}
+    try {
+      body = (await req.json()) as CalculatorInput
+    } catch {
+      // пустое/битое тело — работаем на дефолтах
+      body = {}
+    }
 
     const hoursPerDay = clamp(body.hoursPerDay ?? 10, 2, 16)
     const daysPerMonth = clamp(body.daysPerMonth ?? 24, 5, 31)

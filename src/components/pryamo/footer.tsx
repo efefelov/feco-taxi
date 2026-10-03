@@ -13,6 +13,7 @@ const FOOTER_NAV: { title: string; links: { href: string; label: string }[] }[] 
       { href: '#tech', label: 'Навигатор и GPS' },
       { href: '#apps', label: 'Приложения и установка' },
       { href: '#game', label: 'Игра и лиги' },
+      { href: '#engineering', label: 'ТРИЗ, ТОС и рост' },
     ],
   },
   {

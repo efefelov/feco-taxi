@@ -197,6 +197,25 @@
   background: #52525b;
 }
 
+/* Скроллбар внутри MVP-приложения (тёмный, узкий) */
+.pryamo-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #3f3f46 transparent;
+}
+.pryamo-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.pryamo-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.pryamo-scroll::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 999px;
+}
+.pryamo-scroll::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+
 /* Кастомный скроллбар для таблицы сравнения (светлая секция) */
 .table-scroll {
   scrollbar-width: thin;

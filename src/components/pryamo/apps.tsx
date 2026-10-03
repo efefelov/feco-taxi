@@ -19,6 +19,7 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { openMvpApp } from '@/components/pryamo/mvp'
 
 /**
  * «Приложения и подключение» — как выглядит продукт снаружи:
@@ -282,6 +283,24 @@ export function Apps() {
               Секция для парков
               <ArrowRight className="h-4 w-4" aria-hidden />
             </a>
+          </div>
+
+          {/* Живой мостик в MVP */}
+          <div className="mt-4 flex flex-col items-start gap-3 rounded-xl border border-amber-300 bg-gradient-to-r from-amber-50 to-white p-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="flex items-start gap-2.5 text-sm text-zinc-600">
+              <Play className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+              <span>
+                <strong className="text-zinc-900">Не хотите ждать сторов?</strong> MVP-прототип
+                обоих приложений уже работает в этом браузере — с живым движком заказов.
+              </span>
+            </p>
+            <button
+              onClick={() => openMvpApp('passenger')}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-bold text-zinc-950 shadow-md shadow-amber-300/50 transition-colors hover:bg-amber-300"
+            >
+              Открыть сейчас
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </button>
           </div>
         </motion.div>
       </div>

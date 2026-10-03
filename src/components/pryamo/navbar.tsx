@@ -20,6 +20,7 @@ import {
   Trophy,
   Scale,
   TrendingUp,
+  Wrench,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -32,6 +33,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { useEngineStatus } from '@/lib/pryamo/socket'
+import { openMvpApp } from '@/components/pryamo/mvp'
 
 /** Прямые ссылки верхнего уровня */
 const NAV = [
@@ -65,6 +67,7 @@ const PRODUCT_GROUPS: {
       { href: '#tech', label: 'Технологии', desc: 'навигатор и GPS без клетки', icon: Navigation },
       { href: '#apps', label: 'Приложения', desc: 'iOS, Android, RuStore, PWA', icon: Smartphone },
       { href: '#game', label: 'Игра', desc: 'лиги, квесты и колесо', icon: Trophy },
+      { href: '#engineering', label: 'ТРИЗ и ТОС', desc: 'мафия-оффер и барабан', icon: Wrench },
     ],
   },
   {
@@ -72,7 +75,7 @@ const PRODUCT_GROUPS: {
     links: [
       { href: '#fleets', label: 'Таксопаркам', desc: 'B2B-подключение', icon: Building2 },
       { href: '#law', label: 'Закон и отбор', desc: 'ФГИС, медосмотры, путёвки', icon: Scale },
-      { href: '#founders', label: 'Инвесторам', desc: 'ТРИЗ, ТОС и unit-экономика', icon: TrendingUp },
+      { href: '#founders', label: 'Инвесторам', desc: 'unit-экономика и маржа', icon: TrendingUp },
     ],
   },
 ]
@@ -310,6 +313,14 @@ export function Navbar() {
               {engineLabel}
             </span>
             <Button
+              onClick={() => openMvpApp('passenger')}
+              variant="outline"
+              className="h-10 border-amber-400/50 bg-amber-400/10 font-bold text-amber-300 hover:bg-amber-400/20 hover:text-amber-200"
+            >
+              <Smartphone className="mr-1 h-4 w-4" />
+              MVP-приложение
+            </Button>
+            <Button
               asChild
               className="bg-emerald-500 text-zinc-950 font-bold hover:bg-emerald-400 shadow-lg shadow-emerald-500/25"
             >
@@ -399,6 +410,16 @@ export function Navbar() {
                   {n.label}
                 </a>
               ))}
+              <button
+                onClick={() => {
+                  setOpen(false)
+                  openMvpApp('passenger')
+                }}
+                className="mt-2 flex items-center justify-center gap-2 rounded-xl border border-amber-400/50 bg-amber-400/10 px-4 py-3 text-base font-bold text-amber-300"
+              >
+                <Smartphone className="h-5 w-5" />
+                Открыть MVP-приложение
+              </button>
               <a
                 href="#join"
                 onClick={() => setOpen(false)}

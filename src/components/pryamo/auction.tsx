@@ -46,7 +46,7 @@ function makeOrder(n: number): AuctionOrder {
     to: pick(STREETS_TO),
     km,
     min,
-    payout: Math.round(price * 0.92),
+    payout: Math.round(price * 0.88),
   }
 }
 

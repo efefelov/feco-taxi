@@ -18,6 +18,7 @@ import { Fleets } from '@/components/pryamo/fleets'
 import { Compliance } from '@/components/pryamo/compliance'
 import { RatingSection } from '@/components/pryamo/rating'
 import { Gamification } from '@/components/pryamo/gamification'
+import { Engineering } from '@/components/pryamo/engineering'
 import { TechSection } from '@/components/pryamo/tech'
 import { Apps } from '@/components/pryamo/apps'
 import { Investors } from '@/components/pryamo/investors'
@@ -27,6 +28,7 @@ import { Waitlist } from '@/components/pryamo/waitlist'
 import { Footer } from '@/components/pryamo/footer'
 import { OnboardingWizard } from '@/components/pryamo/onboarding'
 import { ScrollProgress } from '@/components/pryamo/scroll-progress'
+import { MvpApp } from '@/components/pryamo/mvp'
 
 export default function Home() {
   return (
@@ -50,6 +52,7 @@ export default function Home() {
         <Compliance />
         <RatingSection />
         <Gamification />
+        <Engineering />
         <TechSection />
         <Apps />
         <Investors />
@@ -60,6 +63,7 @@ export default function Home() {
       <Footer />
       <OnboardingWizard />
       <ScrollProgress />
+      <MvpApp />
     </div>
   )
 }

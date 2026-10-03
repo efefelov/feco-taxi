@@ -273,7 +273,7 @@ export function PassengerDemo() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-zinc-400">Водитель получит</span>
-                      <span className="font-bold text-emerald-400">{rub(Math.round(price * 0.92))}</span>
+                      <span className="font-bold text-emerald-400">{rub(Math.round(price * 0.88))}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-zinc-400">Комиссия ПРЯМО (12%)</span>

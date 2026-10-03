@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { motion, useInView } from 'framer-motion'
 import { ArrowDown, BadgePercent, ShieldCheck, Timer, ReceiptText, TrendingDown, Users, Radio } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { openMvpApp } from '@/components/pryamo/mvp'
 import { rub, num, plural } from '@/lib/pryamo/format'
 import { CountUp } from '@/components/pryamo/count-up'
 import { OnboardingTrigger } from '@/components/pryamo/onboarding'
@@ -315,6 +316,15 @@ export function Hero() {
                   Попробовать живое демо
                   <ArrowDown className="ml-2 h-4 w-4" />
                 </a>
+              </Button>
+              <Button
+                size="lg"
+                onClick={() => openMvpApp('passenger')}
+                className="h-12 border-amber-400/60 bg-amber-400/10 px-7 text-base font-bold text-amber-300 shadow-lg shadow-amber-400/10 hover:bg-amber-400/20 hover:text-amber-200"
+                variant="outline"
+              >
+                Открыть MVP-приложение
+                <ArrowDown className="ml-2 h-4 w-4 rotate-[-90deg]" />
               </Button>
               <Button
                 asChild

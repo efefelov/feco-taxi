@@ -26,7 +26,7 @@ const marketStats = [
   { id: 'commission-volatility', label: 'Волатильность комиссии Яндекса', value: 37, unit: '%', hint: 'Комиссия меняется алгоритмом в реальном времени', source: 'РОСАКАДЕМТРАНС', tone: 'danger' },
   { id: 'citymobil', label: 'Падение доли Ситимобил в Москве', value: 97, unit: '%', hint: 'С 28,7% (2020) до 0,86% (2024): второго игрока больше нет', source: 'ecomhub.ru, 2024', tone: 'danger' },
   { id: 'driver-loss', label: 'Фактические потери водителя от агрегатора', value: 40, unit: '%', hint: 'Комиссия 24%+ + опции + платные услуги парков + штрафы', source: 'Судебная практика: 104 336 ₽ из 520 575 ₽', tone: 'danger' },
-  { id: 'our-commission', label: 'Комиссия ПРЯМО — фикс', value: 8, unit: '%', hint: 'Или 0% с подпиской ПРЯМО Pro за 1 990 ₽/мес', source: 'Наша оферта', tone: 'success' },
+  { id: 'our-commission', label: 'Комиссия ПРЯМО — фикс', value: 12, unit: '%', hint: 'Или 0% с подпиской ПРЯМО Pro за 2 490 ₽/мес', source: 'Наша оферта', tone: 'success' },
 ]
 
 // Генерация истории поездок за 14 дней для графиков
@@ -52,7 +52,7 @@ function seedRides() {
       const surge = rnd() > 0.8 ? 1.2 : 1.0
       const price = Math.round((79 + 14 * distKm + 6 * durMin) * mults[ti] * surge / 10) * 10
       const isPro = rnd() > 0.55
-      const commission = isPro ? 0 : Math.round(price * 0.08)
+      const commission = isPro ? 0 : Math.round(price * 0.12)
       const payout = price - commission
       const tip = rnd() > 0.7 ? Math.round(30 + rnd() * 170) : 0
       const d = new Date()
