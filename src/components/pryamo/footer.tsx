@@ -47,6 +47,7 @@ const FOOTER_NAV: {
       { href: '/docs/pryamo-marketing-strategy.docx', label: 'Стратегия · docx', download: true },
       { href: '/docs/pryamo-knowledge-base.docx', label: 'База знаний · docx', download: true },
       { href: '/docs/pryamo-project-docs.docx', label: 'Роадмап и бюджет · docx', download: true },
+      { href: '/docs/pryamo-gtm-channels.docx', label: 'GTM-каналы · docx', download: true },
       { href: '/docs/pryamo-pitch-demoday.pptx', label: 'Питч демо-дня · pptx', download: true },
       { href: '/docs/pryamo-pitch-demoday.pdf', label: 'Питч · pdf', newTab: true },
       { href: '/docs/pryamo-financial-model.xlsx', label: 'Финмодель · xlsx', download: true },

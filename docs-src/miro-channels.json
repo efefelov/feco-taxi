@@ -1,0 +1,363 @@
+{
+  "board": "69 источников трафика для SAAS продуктов",
+  "source_url": "https://miro.com/app/board/uXjVP_PkEGE=/?share_link_id=629270271916",
+  "extraction_method": "Miro a11y-outline «Explore board content» (все 174 объекта доски: 89 узлов + 85 связок) + геометрическая реконструкция дерева по якорям связок; верифицировано VLM на зум-скриншотах (кластеры Инфлюенсеры, Рекламные кабинеты/Медийный, UGC контент)",
+  "tree": {
+    "title": "69 источников трафика для SAAS продуктов",
+    "subsections": [
+      {
+        "title": "Платные каналы (36)",
+        "items": [],
+        "subsections": [
+          {
+            "title": "Поисковый трафик",
+            "items": [
+              "Google Ads",
+              "Bing Ads (Microsoft Advertising)",
+              "Яндекс Директ",
+              "Apple Search Ads",
+              "Google Play Ads"
+            ],
+            "subsections": []
+          },
+          {
+            "title": "Медийный трафик",
+            "items": [],
+            "subsections": [
+              {
+                "title": "Инфлюенсеры",
+                "items": [
+                  "Youtube",
+                  "Instagram",
+                  "Реклама в стримах на Twitch",
+                  "Посевы в X",
+                  "Покупка интеграций у блогеров TikTok",
+                  "Реклама в группах VK/OK",
+                  "Посевы в Telegram каналах",
+                  "Интеграция в аудио подкасты"
+                ],
+                "subsections": []
+              },
+              {
+                "title": "Рекламные кабинеты соцсетей",
+                "items": [
+                  "Реклама в YouTube",
+                  "TikTok Ads",
+                  "Facebook (Meta Ads)",
+                  "Reddit Ads",
+                  "Twitch Ads",
+                  "WeChat Advertising (на Китайскую аудиторию)",
+                  "Рекламная сеть Яндекса",
+                  "ВКонтакте рекламная сеть",
+                  "Spotify Ads и другие стримминговые платформы",
+                  "Telegram Ads",
+                  "Instagram (Meta Ads)",
+                  "X Ads (Twitter)",
+                  "Quora Ads"
+                ],
+                "subsections": []
+              },
+              {
+                "title": "In-App сети",
+                "items": [
+                  "Google Admob",
+                  "Applovin",
+                  "Unity Ads",
+                  "InMobi",
+                  "IronSource",
+                  "PropellerAds",
+                  "Smaato",
+                  "Vungle",
+                  "Порно трафик (Pornhub Network)",
+                  "Bigo Ads (Bigo Live)"
+                ],
+                "subsections": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Бесплатные каналы (33)",
+        "items": [],
+        "subsections": [
+          {
+            "title": "B2C SAAS маркетплейсы, micro SAAS",
+            "items": [
+              "App Store",
+              "Google Play",
+              "Huawei Store",
+              "Google Chrome Web Store",
+              "RuStore (На Россию)",
+              "Discord Activities"
+            ],
+            "subsections": []
+          },
+          {
+            "title": "Маркетплейсы Услуг",
+            "items": [
+              "Fiverr",
+              "Upwork",
+              "Avito",
+              "YouDo"
+            ],
+            "subsections": []
+          },
+          {
+            "title": "B2B SAAS маркетплейсы",
+            "items": [
+              "Маркеты расширений Shopify",
+              "Wix App Market",
+              "Маркеты Amazon Web Services",
+              "ChatGPT плагины",
+              "Zoom маркетплейс"
+            ],
+            "subsections": [
+              {
+                "title": "Маркеты для виджетов CRM",
+                "items": [
+                  "SalesForce",
+                  "ZohoCRM",
+                  "AmoCRM",
+                  "Bitrix24"
+                ],
+                "subsections": []
+              }
+            ]
+          },
+          {
+            "title": "UGC контент",
+            "items": [],
+            "subsections": [
+              {
+                "title": "Reels",
+                "items": [
+                  "TikTok нейро фермы",
+                  "Youtube Shorts нейро фермы",
+                  "Instagram Reels нейро фермы"
+                ],
+                "subsections": []
+              },
+              {
+                "title": "SEO",
+                "items": [
+                  "On-Page SEO: блог на собственной платформе",
+                  "Off-Page SEO Собственные статьи на сторонних платформах (Medium, Хабр, Дзен)",
+                  "Off-Page SEO Заказ SEO статей на сторонних платформах (Medium, Хабр, Дзен)"
+                ],
+                "subsections": []
+              },
+              {
+                "title": "ASO",
+                "items": [
+                  "App Store Optimization (iOS)",
+                  "Google Play Optimization (Android)"
+                ],
+                "subsections": []
+              },
+              {
+                "title": "X",
+                "items": [
+                  "Тег #buildinpublic и скриншоты MRR из страйпа"
+                ],
+                "subsections": []
+              }
+            ]
+          },
+          {
+            "title": "Аутрич",
+            "items": [
+              "Cold Email Outreach",
+              "Лидген в открытых чатах",
+              "Лидген в Дискорд сообществах",
+              "Аутрич в Linkedin"
+            ],
+            "subsections": []
+          }
+        ]
+      }
+    ]
+  },
+  "sections": [
+    {
+      "title": "Поисковый трафик",
+      "branch": "Платные каналы (36)",
+      "items": [
+        "Google Ads",
+        "Bing Ads (Microsoft Advertising)",
+        "Яндекс Директ",
+        "Apple Search Ads",
+        "Google Play Ads"
+      ]
+    },
+    {
+      "title": "Медийный трафик",
+      "branch": "Платные каналы (36)",
+      "items": [],
+      "note": "Над-секция (группирующий хаб): сама каналов не содержит, объединяет секции «Рекламные кабинеты соцсетей», «Инфлюенсеры», «In-App сети»; при этом РСЯ/ВК-сеть/Spotify соединены линиями с хабом «Рекламные кабинеты соцсетей»."
+    },
+    {
+      "title": "Инфлюенсеры",
+      "branch": "Платные каналы (36)",
+      "items": [
+        "Youtube",
+        "Instagram",
+        "Реклама в стримах на Twitch",
+        "Посевы в X",
+        "Покупка интеграций у блогеров TikTok",
+        "Реклама в группах VK/OK",
+        "Посевы в Telegram каналах",
+        "Интеграция в аудио подкасты"
+      ],
+      "nested_under": "Медийный трафик"
+    },
+    {
+      "title": "Рекламные кабинеты соцсетей",
+      "branch": "Платные каналы (36)",
+      "items": [
+        "Реклама в YouTube",
+        "TikTok Ads",
+        "Facebook (Meta Ads)",
+        "Reddit Ads",
+        "Twitch Ads",
+        "WeChat Advertising (на Китайскую аудиторию)",
+        "Рекламная сеть Яндекса",
+        "ВКонтакте рекламная сеть",
+        "Spotify Ads и другие стримминговые платформы",
+        "Telegram Ads",
+        "Instagram (Meta Ads)",
+        "X Ads (Twitter)",
+        "Quora Ads"
+      ],
+      "nested_under": "Медийный трафик"
+    },
+    {
+      "title": "In-App сети",
+      "branch": "Платные каналы (36)",
+      "items": [
+        "Google Admob",
+        "Applovin",
+        "Unity Ads",
+        "InMobi",
+        "IronSource",
+        "PropellerAds",
+        "Smaato",
+        "Vungle",
+        "Порно трафик (Pornhub Network)",
+        "Bigo Ads (Bigo Live)"
+      ],
+      "nested_under": "Медийный трафик"
+    },
+    {
+      "title": "B2C SAAS маркетплейсы, micro SAAS",
+      "branch": "Бесплатные каналы (33)",
+      "items": [
+        "App Store",
+        "Google Play",
+        "Huawei Store",
+        "Google Chrome Web Store",
+        "RuStore (На Россию)",
+        "Discord Activities"
+      ]
+    },
+    {
+      "title": "Маркетплейсы Услуг",
+      "branch": "Бесплатные каналы (33)",
+      "items": [
+        "Fiverr",
+        "Upwork",
+        "Avito",
+        "YouDo"
+      ]
+    },
+    {
+      "title": "B2B SAAS маркетплейсы",
+      "branch": "Бесплатные каналы (33)",
+      "items": [
+        "Маркеты расширений Shopify",
+        "Wix App Market",
+        "Маркеты Amazon Web Services",
+        "ChatGPT плагины",
+        "Zoom маркетплейс"
+      ]
+    },
+    {
+      "title": "Маркеты для виджетов CRM",
+      "branch": "Бесплатные каналы (33)",
+      "items": [
+        "SalesForce",
+        "ZohoCRM",
+        "AmoCRM",
+        "Bitrix24"
+      ],
+      "nested_under": "B2B SAAS маркетплейсы"
+    },
+    {
+      "title": "UGC контент",
+      "branch": "Бесплатные каналы (33)",
+      "items": [],
+      "note": "Над-секция (группирующий хаб): каналов-листьев не имеет, объединяет секции Reels, SEO, ASO, X."
+    },
+    {
+      "title": "Reels",
+      "branch": "Бесплатные каналы (33)",
+      "items": [
+        "TikTok нейро фермы",
+        "Youtube Shorts нейро фермы",
+        "Instagram Reels нейро фермы"
+      ],
+      "nested_under": "UGC контент"
+    },
+    {
+      "title": "SEO",
+      "branch": "Бесплатные каналы (33)",
+      "items": [
+        "On-Page SEO: блог на собственной платформе",
+        "Off-Page SEO Собственные статьи на сторонних платформах (Medium, Хабр, Дзен)",
+        "Off-Page SEO Заказ SEO статей на сторонних платформах (Medium, Хабр, Дзен)"
+      ],
+      "nested_under": "UGC контент"
+    },
+    {
+      "title": "ASO",
+      "branch": "Бесплатные каналы (33)",
+      "items": [
+        "App Store Optimization (iOS)",
+        "Google Play Optimization (Android)"
+      ],
+      "nested_under": "UGC контент"
+    },
+    {
+      "title": "X",
+      "branch": "Бесплатные каналы (33)",
+      "items": [
+        "Тег #buildinpublic и скриншоты MRR из страйпа"
+      ],
+      "nested_under": "UGC контент"
+    },
+    {
+      "title": "Аутрич",
+      "branch": "Бесплатные каналы (33)",
+      "items": [
+        "Cold Email Outreach",
+        "Лидген в открытых чатах",
+        "Лидген в Дискорд сообществах",
+        "Аутрич в Linkedin"
+      ]
+    }
+  ],
+  "counts": {
+    "channels_total_extracted": 68,
+    "paid_claimed": 36,
+    "paid_extracted": 36,
+    "free_claimed": 33,
+    "free_extracted": 32,
+    "sections": 13,
+    "objects_on_board": 174
+  },
+  "unresolved": [
+    "Ветка «Бесплатные каналы (33)» фактически содержит 32 канала-листа (платная ветка сходится точно: 36/36). Вероятная причина: узел «UGC контент» является группирующим хабом (подгруппы Reels/SEO/ASO/X) без собственных каналов-листьев — автор, вероятно, посчитал его каналом; либо один объект был удалён с доски после создания.",
+    "«Медийный трафик» — над-секция без собственных каналов: её подхабы «Рекламные кабинеты соцсетей», «Инфлюенсеры», «In-App сети». При этом каналы «Рекламная сеть Яндекса», «ВКонтакте рекламная сеть», «Spotify Ads…» соединены линиями с хабом «Рекламные кабинеты соцсетей» (проверено геометрически и визуально), хотя семантически относятся к медийному трафику.",
+    "Не-канальные объекты доски (не включены в списки): 2 картинки-промо и текст-ссылка https://baza.education/land20 (внизу слева; содержимое промо-изображения: «Найди здесь все микро-цели, запусти трафик и получи первые продажи»)."
+  ]
+}
