@@ -272,7 +272,7 @@ export function Hero() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
               </span>
-              Стратегический концепт · «убийца» агрегаторов-монополистов
+              Стратегический концепт · инфраструктура вместо монополии
             </motion.div>
 
             <motion.h1
