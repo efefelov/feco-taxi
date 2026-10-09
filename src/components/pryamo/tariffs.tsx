@@ -10,13 +10,13 @@ import { estimatePrice, rub } from '@/lib/pryamo/format'
 import { cn } from '@/lib/utils'
 
 const FALLBACK: Tariff[] = [
-  { id: 'eco', name: 'Прямой', description: 'Такси как есть: фикс-цена до конца поездки, честная машина без украшений.', multiplier: 1.0, baseFare: 79, perKm: 14, perMin: 6, carClass: 'Kia Rio, Hyundai Solaris, VW Polo, Lada Vesta', sortOrder: 1 },
-  { id: 'comfort', name: 'Ладный', description: 'Всё работает и всё ладно: климат-контроль, свежие машины до 6 лет.', multiplier: 1.35, baseFare: 129, perKm: 18, perMin: 7, carClass: 'Toyota Corolla, Skoda Octavia, Kia Cerato', sortOrder: 2 },
-  { id: 'comfort-plus', name: 'Привольный', description: 'Простор для ног и мыслей: вода, зарядки USB-C, мягкий ход.', multiplier: 1.7, baseFare: 169, perKm: 21, perMin: 8, carClass: 'Toyota Camry, Kia K5, Skoda Superb', sortOrder: 3 },
-  { id: 'business', name: 'Барин', description: 'Едешь как хозяин: дресс-код водителя, встреча с табличкой, тишина.', multiplier: 2.4, baseFare: 299, perKm: 30, perMin: 12, carClass: 'Mercedes E, BMW 5, Audi A6', sortOrder: 4 },
-  { id: 'van', name: 'Артель', description: 'Вся ватага в одной машине: до шести мест, кресла без доплаты.', multiplier: 1.5, baseFare: 149, perKm: 19, perMin: 8, carClass: 'VW Caravelle, Hyundai H-1, Lada Largus 7 мест', sortOrder: 5 },
-  { id: 'intercity', name: 'Дальняк', description: 'Между городами: цена за всю машину целиком, фикс до конца маршрута.', multiplier: 1.0, baseFare: 0, perKm: 34, perMin: 0, carClass: 'Любой класс от Ладного', sortOrder: 6 },
-  { id: 'cargo', name: 'Хомяк', description: 'Тащит больше, чем видно: грузы, переезды, доставка рассады.', multiplier: 1.2, baseFare: 299, perKm: 28, perMin: 0, carClass: 'Газель, Ford Transit, VW Transporter', sortOrder: 7 },
+  { id: 'eco', name: 'Прямой', description: 'Такси как есть: фикс-цена до конца поездки, честная машина без украшений.', multiplier: 1.0, baseFare: 79, perKm: 14, perMin: 6, carClass: 'Kia Rio, Hyundai Solaris, VW Polo, Lada Vesta · до 9 лет', sortOrder: 1 },
+  { id: 'comfort', name: 'Ладный', description: 'Всё работает и всё ладно: климат-контроль, свежие машины до 6 лет.', multiplier: 1.35, baseFare: 129, perKm: 18, perMin: 7, carClass: 'Toyota Corolla, Skoda Octavia, Kia Cerato · до 6 лет', sortOrder: 2 },
+  { id: 'comfort-plus', name: 'Привольный', description: 'Простор для ног и мыслей: вода, зарядки USB-C, мягкий ход.', multiplier: 1.7, baseFare: 169, perKm: 21, perMin: 8, carClass: 'Toyota Camry, Kia K5, Skoda Superb · до 5 лет', sortOrder: 3 },
+  { id: 'business', name: 'Барин', description: 'Едешь как хозяин: дресс-код водителя, встреча с табличкой, тишина.', multiplier: 2.4, baseFare: 299, perKm: 30, perMin: 12, carClass: 'Mercedes E, BMW 5, Audi A6 · до 4 лет', sortOrder: 4 },
+  { id: 'van', name: 'Артель', description: 'Вся ватага в одной машине: до шести мест, кресла без доплаты.', multiplier: 1.5, baseFare: 149, perKm: 19, perMin: 8, carClass: 'VW Caravelle, Hyundai H-1, Lada Largus 7 мест · до 6 лет', sortOrder: 5 },
+  { id: 'intercity', name: 'Дальняк', description: 'Между городами: цена за всю машину целиком, фикс до конца маршрута.', multiplier: 1.0, baseFare: 0, perKm: 34, perMin: 0, carClass: 'Любой класс от Ладного · до 8 лет', sortOrder: 6 },
+  { id: 'cargo', name: 'Хомяк', description: 'Тащит больше, чем видно: грузы, переезды, доставка рассады.', multiplier: 1.2, baseFare: 299, perKm: 28, perMin: 0, carClass: 'Газель, Ford Transit, VW Transporter · до 10 лет', sortOrder: 7 },
 ]
 
 /** Длительность поездки по скорости города: ~27 км/ч + 3 мин на подачу/прогрев */
@@ -65,6 +65,11 @@ export function TariffsSection() {
             Формула каждой цены — на виду. Подвиньте расстояние: цена в карточках
             посчитается по формуле тарифа. Что увидели — то и заплатили: пересчётов
             «по факту» не существует.
+          </p>
+          <p className="mt-3 text-sm text-zinc-500">
+            Имена — свои, народные: ни Эконома, ни Комфорта. «Прямой» довезёт как надо,
+            «Ладный» — как ладно, «Барин» — как хозяин. Возраст машин и марки —
+            из оферты: требование к автомобилю градуировано по тарифу.
           </p>
         </motion.div>
 
