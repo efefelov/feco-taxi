@@ -406,8 +406,8 @@ export function Hero() {
           >
             <div className="absolute -inset-4 rounded-3xl bg-gradient-to-b from-emerald-500/10 to-transparent blur-2xl" aria-hidden="true" />
             <div className="relative space-y-4">
-              <ReceiptCard title="Одна и та же поездка · Эконом" rows={RECEIPT_ROWS_PRYAMO} tone="pryamo" />
-              <ReceiptCard title="Одна и та же поездка · Эконом" rows={RECEIPT_ROWS_YANDEX} tone="yandex" />
+              <ReceiptCard title="Одна и та же поездка · класс Прямой" rows={RECEIPT_ROWS_PRYAMO} tone="pryamo" />
+              <ReceiptCard title="Одна и та же поездка · класс Эконом у монополиста" rows={RECEIPT_ROWS_YANDEX} tone="yandex" />
             </div>
           </motion.div>
         </div>

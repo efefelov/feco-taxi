@@ -423,7 +423,7 @@ function FirstOrderStep({
       >
         <div className="flex items-center justify-between gap-3">
           <span className="rounded bg-zinc-800/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-            Эконом · 10,1 км · 26 мин
+            Прямой · 10,1 км · 26 мин
           </span>
           {phase === 'idle' && (
             <span

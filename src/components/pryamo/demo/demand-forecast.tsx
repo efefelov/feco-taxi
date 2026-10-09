@@ -81,7 +81,7 @@ export function DemandForecast({ zones }: { zones: ZoneDTO[] }) {
     if (h >= 0 && h <= 5)
       return {
         tone: 'night' as const,
-        text: 'Ночь: мало заказов, но высока доля Бизнеса и Аэропорта. Проверьте зону Аэропорта на карте.',
+        text: 'Ночь: мало заказов, но высока доля Барина и Аэропорта. Проверьте зону Аэропорта на карте.',
       }
     return {
       tone: 'calm' as const,
@@ -142,7 +142,7 @@ export function DemandForecast({ zones }: { zones: ZoneDTO[] }) {
           <MoonStar className="h-4 w-4 shrink-0 text-zinc-500" />
           <div className="min-w-0">
             <p className="text-xs font-bold text-white">22:00–5:00</p>
-            <p className="text-[10px] text-zinc-500">ночь, доля Бизнеса</p>
+            <p className="text-[10px] text-zinc-500">ночь, доля Барина</p>
           </div>
         </div>
       </div>
