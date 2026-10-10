@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ComponentType } from 'react'
 import { motion } from 'framer-motion'
 import {
   Rocket,
@@ -46,6 +46,18 @@ function formatPhone(raw: string): string {
   return out
 }
 
+/** Визуальный дубль поля на время SSR-гидрации: не <input> — расширениям (LastPass и др.) нечего помечать иконкой до гидрации React */
+function FieldSkeleton({ icon: Icon, text }: { icon: ComponentType<{ className?: string }>; text: string }) {
+  return (
+    <div className="relative" aria-hidden="true">
+      <Icon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+      <div className="flex h-9 w-full items-center rounded-md border border-zinc-700 bg-zinc-950/60 pl-9 pr-3 text-sm text-zinc-400">
+        {text}
+      </div>
+    </div>
+  )
+}
+
 const PERKS = [
   {
     icon: BadgeCheck,
@@ -73,6 +85,12 @@ export function Waitlist() {
   const [count, setCount] = useState<number | null>(null)
   const [cities, setCities] = useState<CityStat[]>([])
   const [joined, setJoined] = useState<{ position: number; message: string } | null>(null)
+
+  // Гидрация без инпутов: расширения браузера (LastPass) вклеивают свои узлы в DOM
+  // до завершения гидрации React и ломают её. Поля появляются после монтирования —
+  // при обновлениях React лишние DOM-узлы игнорируются, ошибки гидрации нет.
+  const [formMounted, setFormMounted] = useState(false)
+  useEffect(() => setFormMounted(true), [])
 
   useEffect(() => {
     fetch('/api/waitlist')
@@ -359,42 +377,55 @@ export function Waitlist() {
                 </div>
 
                 <div className="mt-4 space-y-3">
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-                    <Input
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder={role === 'driver' ? 'Имя' : 'Название парка'}
-                      aria-label="Имя или название"
-                      className="border-zinc-700 bg-zinc-950/60 pl-9 text-white placeholder:text-zinc-400"
-                      maxLength={80}
-                    />
-                  </div>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-                    <Input
-                      value={phone}
-                      onChange={(e) => setPhone(formatPhone(e.target.value))}
-                      placeholder="+7 XXX XXX-XX-XX"
-                      type="tel"
-                      inputMode="tel"
-                      autoComplete="tel"
-                      aria-label="Телефон"
-                      className="border-zinc-700 bg-zinc-950/60 pl-9 text-white placeholder:text-zinc-400"
-                      maxLength={18}
-                    />
-                  </div>
-                  <div className="relative">
-                    <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
-                    <Input
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      placeholder="Город"
-                      aria-label="Город"
-                      className="border-zinc-700 bg-zinc-950/60 pl-9 text-white placeholder:text-zinc-400"
-                      maxLength={60}
-                    />
-                  </div>
+                  {!formMounted ? (
+                    <>
+                      <FieldSkeleton icon={User} text={role === 'driver' ? 'Имя' : 'Название парка'} />
+                      <FieldSkeleton icon={Phone} text="+7 XXX XXX-XX-XX" />
+                      <FieldSkeleton icon={MapPin} text="Город" />
+                    </>
+                  ) : (
+                    <>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                        <Input
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          placeholder={role === 'driver' ? 'Имя' : 'Название парка'}
+                          aria-label="Имя или название"
+                          data-lpignore="true"
+                          className="border-zinc-700 bg-zinc-950/60 pl-9 text-white placeholder:text-zinc-400"
+                          maxLength={80}
+                        />
+                      </div>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                        <Input
+                          value={phone}
+                          onChange={(e) => setPhone(formatPhone(e.target.value))}
+                          placeholder="+7 XXX XXX-XX-XX"
+                          type="tel"
+                          inputMode="tel"
+                          autoComplete="tel"
+                          aria-label="Телефон"
+                          data-lpignore="true"
+                          className="border-zinc-700 bg-zinc-950/60 pl-9 text-white placeholder:text-zinc-400"
+                          maxLength={18}
+                        />
+                      </div>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                        <Input
+                          value={city}
+                          onChange={(e) => setCity(e.target.value)}
+                          placeholder="Город"
+                          aria-label="Город"
+                          data-lpignore="true"
+                          className="border-zinc-700 bg-zinc-950/60 pl-9 text-white placeholder:text-zinc-400"
+                          maxLength={60}
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <Button

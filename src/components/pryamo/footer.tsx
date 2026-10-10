@@ -42,7 +42,7 @@ const FOOTER_NAV: {
     ],
   },
   {
-    title: 'Документы проекта',
+    title: 'Документы · концепция',
     links: [
       { href: '/docs/pryamo-marketing-strategy.docx', label: 'Стратегия · docx', download: true },
       { href: '/docs/pryamo-knowledge-base.docx', label: 'База знаний · docx', download: true },
@@ -51,6 +51,15 @@ const FOOTER_NAV: {
       { href: '/docs/pryamo-pitch-demoday.pptx', label: 'Питч демо-дня · pptx', download: true },
       { href: '/docs/pryamo-pitch-demoday.pdf', label: 'Питч · pdf', newTab: true },
       { href: '/docs/pryamo-financial-model.xlsx', label: 'Финмодель · xlsx', download: true },
+    ],
+  },
+  {
+    title: 'Запуск · инструкции',
+    links: [
+      { href: '/docs/pryamo-release-deploy-guide.docx', label: 'Релиз и деплой · docx', download: true },
+      { href: '/docs/pryamo-vk-tg-guide.docx', label: 'VK и Telegram · docx', download: true },
+      { href: '/docs/pryamo-sales-infrastructure.docx', label: 'Деньги и право · docx', download: true },
+      { href: '/docs/pryamo-launch-plan.docx', label: 'План 90 дней · docx', download: true },
     ],
   },
 ]
@@ -88,7 +97,7 @@ export function Footer() {
 
           {/* Мини-карта сайта */}
           <nav
-            className="grid grid-cols-2 gap-8 sm:grid-cols-4"
+            className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 lg:grid-cols-5"
             aria-label="Навигация в подвале"
           >
             {FOOTER_NAV.map((col) => (

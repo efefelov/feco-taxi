@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { BadgeRussianRuble, Car, Gauge, MapPin, ShieldCheck, ArrowRight } from 'lucide-react'
+import { BadgeRussianRuble, Car, Gauge, MapPin, ShieldCheck, ArrowRight, Flame, Plane, Ship, Truck, Mountain } from 'lucide-react'
 import { Slider } from '@/components/ui/slider'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { Tariff } from '@/lib/pryamo/types'
@@ -10,13 +10,13 @@ import { estimatePrice, rub } from '@/lib/pryamo/format'
 import { cn } from '@/lib/utils'
 
 const FALLBACK: Tariff[] = [
-  { id: 'eco', name: 'Прямой', description: 'Такси как есть: фикс-цена до конца поездки, честная машина без украшений.', multiplier: 1.0, baseFare: 79, perKm: 14, perMin: 6, carClass: 'Kia Rio, Hyundai Solaris, VW Polo, Lada Vesta · до 9 лет', sortOrder: 1 },
-  { id: 'comfort', name: 'Ладный', description: 'Всё работает и всё ладно: климат-контроль, свежие машины до 6 лет.', multiplier: 1.35, baseFare: 129, perKm: 18, perMin: 7, carClass: 'Toyota Corolla, Skoda Octavia, Kia Cerato · до 6 лет', sortOrder: 2 },
-  { id: 'comfort-plus', name: 'Привольный', description: 'Простор для ног и мыслей: вода, зарядки USB-C, мягкий ход.', multiplier: 1.7, baseFare: 169, perKm: 21, perMin: 8, carClass: 'Toyota Camry, Kia K5, Skoda Superb · до 5 лет', sortOrder: 3 },
-  { id: 'business', name: 'Барин', description: 'Едешь как хозяин: дресс-код водителя, встреча с табличкой, тишина.', multiplier: 2.4, baseFare: 299, perKm: 30, perMin: 12, carClass: 'Mercedes E, BMW 5, Audi A6 · до 4 лет', sortOrder: 4 },
-  { id: 'van', name: 'Артель', description: 'Вся ватага в одной машине: до шести мест, кресла без доплаты.', multiplier: 1.5, baseFare: 149, perKm: 19, perMin: 8, carClass: 'VW Caravelle, Hyundai H-1, Lada Largus 7 мест · до 6 лет', sortOrder: 5 },
-  { id: 'intercity', name: 'Дальняк', description: 'Между городами: цена за всю машину целиком, фикс до конца маршрута.', multiplier: 1.0, baseFare: 0, perKm: 34, perMin: 0, carClass: 'Любой класс от Ладного · до 8 лет', sortOrder: 6 },
-  { id: 'cargo', name: 'Хомяк', description: 'Тащит больше, чем видно: грузы, переезды, доставка рассады.', multiplier: 1.2, baseFare: 299, perKm: 28, perMin: 0, carClass: 'Газель, Ford Transit, VW Transporter · до 10 лет', sortOrder: 7 },
+  { id: 'eco', name: 'Прямой', description: 'Такси как есть: фикс-цена до конца поездки, честная машина без украшений.', multiplier: 1.0, baseFare: 79, perKm: 14, perMin: 6, carClass: 'Kia Rio, Hyundai Solaris, VW Polo, Lada Vesta · до 5 лет', sortOrder: 1 },
+  { id: 'comfort', name: 'Ладный', description: 'Всё работает и всё ладно: климат-контроль, свежие машины до 4 лет.', multiplier: 1.35, baseFare: 129, perKm: 18, perMin: 7, carClass: 'Toyota Corolla, Skoda Octavia, Kia Cerato · до 4 лет', sortOrder: 2 },
+  { id: 'comfort-plus', name: 'Привольный', description: 'Простор для ног и мыслей: вода, зарядки USB-C, мягкий ход.', multiplier: 1.7, baseFare: 169, perKm: 21, perMin: 8, carClass: 'Toyota Camry, Kia K5, Skoda Superb · до 3 лет', sortOrder: 3 },
+  { id: 'business', name: 'Барин', description: 'Едешь как хозяин: дресс-код водителя, встреча с табличкой, тишина.', multiplier: 2.4, baseFare: 299, perKm: 30, perMin: 12, carClass: 'Mercedes E, BMW 5, Audi A6 · до 2 лет', sortOrder: 4 },
+  { id: 'van', name: 'Артель', description: 'Вся ватага в одной машине: до шести мест, кресла без доплаты.', multiplier: 1.5, baseFare: 149, perKm: 19, perMin: 8, carClass: 'VW Caravelle, Hyundai H-1, Lada Largus 7 мест · до 4 лет', sortOrder: 5 },
+  { id: 'intercity', name: 'Дальняк', description: 'Между городами: цена за всю машину целиком, фикс до конца маршрута.', multiplier: 1.0, baseFare: 0, perKm: 34, perMin: 0, carClass: 'Любой класс от Ладного · до 4 лет', sortOrder: 6 },
+  { id: 'cargo', name: 'Хомяк', description: 'Тащит больше, чем видно: грузы, переезды, доставка рассады.', multiplier: 1.2, baseFare: 299, perKm: 28, perMin: 0, carClass: 'Газель, Ford Transit, VW Transporter · до 5 лет', sortOrder: 7 },
 ]
 
 /** Длительность поездки по скорости города: ~27 км/ч + 3 мин на подачу/прогрев */
@@ -68,8 +68,8 @@ export function TariffsSection() {
           </p>
           <p className="mt-3 text-sm text-zinc-500">
             Имена — свои, народные: ни Эконома, ни Комфорта. «Прямой» довезёт как надо,
-            «Ладный» — как ладно, «Барин» — как хозяин. Возраст машин и марки —
-            из оферты: требование к автомобилю градуировано по тарифу.
+            «Ладный» — как ладно, «Барин» — как хозяин. Возраст — из оферты: не старше
+            5 лет даже в базовом «Прямом», выше классом — моложе, до 2 лет в «Барине».
           </p>
         </motion.div>
 
@@ -159,6 +159,38 @@ export function TariffsSection() {
               {s}
             </span>
           ))}
+        </motion.div>
+
+        {/* Тизер спецтарифов */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-40px' }}
+          transition={{ duration: 0.5 }}
+          className="mt-6 rounded-2xl border border-dashed border-amber-300 bg-amber-50/50 px-6 py-5"
+        >
+          <p className="text-center text-[11px] font-bold uppercase tracking-wider text-amber-700">
+            Особые ряды · витрина план Ф2
+          </p>
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-2.5 text-sm text-zinc-700">
+            {[
+              { icon: Flame, label: 'Вин Дизель', hint: 'спорткары' },
+              { icon: Plane, label: 'Воздух', hint: 'вертолёты и джеты' },
+              { icon: Ship, label: 'Вода', hint: 'катера и яхты' },
+              { icon: Truck, label: 'Кабина', hint: 'автостоп на грузовиках' },
+              { icon: Mountain, label: 'Карьер', hint: 'промышленные экскурсии' },
+            ].map(({ icon: Icon, label, hint }) => (
+              <span key={label} className="flex items-center gap-1.5">
+                <Icon className="h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+                <span className="font-bold text-zinc-900">{label}</span>
+                <span className="text-zinc-500">— {hint}</span>
+              </span>
+            ))}
+          </div>
+          <p className="mt-3 text-center text-xs text-zinc-500">
+            Отдельная витрина с условиями до заказа: перевозчики с лицензиями, реальные фото с фотоконтроля.
+            Народная сетка живёт под клятвой 12%. Старт — промо-кампаниями города.
+          </p>
         </motion.div>
       </div>
     </section>

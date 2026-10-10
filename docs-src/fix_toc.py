@@ -120,10 +120,15 @@ def real_body_pages(headings, pages_txt):
         toc_like = [0]
 
     result = []
-    prev = toc_like[-1]  # тело начинается после страницы содержания
+    prev = toc_like[-1] + 1  # тело начинается после страницы содержания
     for idx, k in enumerate(keys):
         found = 0
-        for p in range(prev, len(npages)):
+        # старт с той же страницы, что и предыдущий заголовок: заголовки могут
+        # делить страницу (монотонность "не убывает", а не "строго растёт").
+        # prev хранится 1-based, поэтому range(prev-1) даёт 0-based индекс
+        # страницы предыдущего заголовка; для первого заголовка это первая
+        # страница после TOC (0-based toc_like[-1] == 1-based toc_like[-1]+1)
+        for p in range(prev - 1, len(npages)):
             if k in npages[p]:
                 found = p + 1
                 break
