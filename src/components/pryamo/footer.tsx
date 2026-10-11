@@ -60,6 +60,7 @@ const FOOTER_NAV: {
       { href: '/docs/pryamo-vk-tg-guide.docx', label: 'VK и Telegram · docx', download: true },
       { href: '/docs/pryamo-sales-infrastructure.docx', label: 'Деньги и право · docx', download: true },
       { href: '/docs/pryamo-launch-plan.docx', label: 'План 90 дней · docx', download: true },
+      { href: '/docs/pryamo-strategy-directions.docx', label: 'Стратегия и окно · docx', download: true },
     ],
   },
 ]

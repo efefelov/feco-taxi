@@ -218,9 +218,47 @@ def patch_styles_and_settings(data):
     data["word/settings.xml"] = se.encode("utf-8")
 
 
+def strip_generated_toc(doc):
+    """docx>=9.9 сам заполняет поле TOC: записи-абзацы (hyperlink + PAGEREF _TocN)
+    врастают в абзацы поля TOC, закладки _TocN ставятся на заголовки (атрибуты
+    name/id в любом порядке). Пайплайн рассчитан на пустое поле: пересобираем
+    sdt-скелет (begin/instrText/separate + end) и вычищаем все _Toc-закладки.
+    Идемпотентно: повторный прогон чистит и записи add_toc (_Toc100000+)."""
+    m = re.search(
+        r'<w:sdt><w:sdtPr><w:alias w:val="Table of Contents"/>.*?</w:sdtContent></w:sdt>',
+        doc, flags=re.S,
+    )
+    if m:
+        pr = re.search(r'<w:sdtPr>.*?</w:sdtPr>', m.group(0), flags=re.S).group(0)
+        skeleton = (
+            "<w:sdt>" + pr + "<w:sdtContent>"
+            '<w:p><w:r><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r>'
+            '<w:r><w:instrText xml:space="preserve">TOC \\h \\o &quot;1-2&quot;</w:instrText></w:r>'
+            '<w:r><w:fldChar w:fldCharType="separate"/></w:r></w:p>'
+            '<w:p><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>'
+            "</w:sdtContent></w:sdt>"
+        )
+        doc = doc[: m.start()] + skeleton + doc[m.end():]
+    # закладки _Toc: собрать id (любой порядок атрибутов), удалить start и парные end
+    ids = set()
+    for mm in re.finditer(r'<w:bookmarkStart [^>]*w:name="_Toc\d+"[^>]*/>', doc):
+        idm = re.search(r'w:id="(\d+)"', mm.group(0))
+        if idm:
+            ids.add(idm.group(1))
+    if ids:
+        doc = re.sub(r'<w:bookmarkStart [^>]*w:name="_Toc\d+"[^>]*/>', "", doc)
+        doc = re.sub(
+            r'<w:bookmarkEnd w:id="(\d+)"/>',
+            lambda mm: "" if mm.group(1) in ids else mm.group(0),
+            doc,
+        )
+    return doc
+
+
 def process(path):
     names, data = read_docx(path)
     doc = data["word/document.xml"].decode("utf-8")
+    doc = strip_generated_toc(doc)
     headings = find_headings(doc)
     if not headings:
         print(f"{path}: заголовков не найдено, пропуск")
