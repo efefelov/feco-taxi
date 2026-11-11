@@ -25,6 +25,7 @@ import { toast } from '@/hooks/use-toast'
 import { CityMap } from './city-map'
 import { usePassengerRide } from '@/lib/pryamo/socket'
 import { estimatePrice, rub, minutesWord } from '@/lib/pryamo/format'
+import { TARIFF_FALLBACK } from '@/lib/pryamo/tariff-fallback'
 import type { Receipt, RideDTO, Tariff } from '@/lib/pryamo/types'
 
 const ADDRESS_PRESETS = [
@@ -103,7 +104,11 @@ export function PassengerDemo() {
           }
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        // Статик-прод без API — канонический фолбэк тарифов
+        setTariffs(TARIFF_FALLBACK)
+        setTariffId(TARIFF_FALLBACK[1]?.id ?? TARIFF_FALLBACK[0]?.id)
+      })
   }, [])
 
   const { book, rate, connected } = usePassengerRide({

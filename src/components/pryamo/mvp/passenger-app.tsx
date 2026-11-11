@@ -44,6 +44,7 @@ import {
   savePassengerHistory,
 } from '@/lib/pryamo/mvp-storage'
 import { pickupDemand, surgeLabel } from '@/lib/pryamo/pickup-zone'
+import { TARIFF_FALLBACK } from '@/lib/pryamo/tariff-fallback'
 import type { Receipt, RideDTO, Tariff } from '@/lib/pryamo/types'
 
 const ADDRESS_PRESETS = [
@@ -128,9 +129,16 @@ export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
         if (d.tariffs?.length) {
           setTariffs(d.tariffs)
           setTariffId(d.tariffs[1]?.id ?? d.tariffs[0]?.id)
+        } else {
+          setTariffs(TARIFF_FALLBACK)
+          setTariffId(TARIFF_FALLBACK[1]?.id ?? TARIFF_FALLBACK[0]?.id)
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        // Статик-прод без API — канонический фолбэк тарифов
+        setTariffs(TARIFF_FALLBACK)
+        setTariffId(TARIFF_FALLBACK[1]?.id ?? TARIFF_FALLBACK[0]?.id)
+      })
   }, [])
 
   const { book, cancel, rate, connected, zones } = useMvpPassenger({
@@ -861,6 +869,26 @@ export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
                   </p>
                 </div>
               </div>
+            </div>
+
+            {/* Гарантии по итогам разбора отзывов Яндекса (см. yandex-reviews.ts) */}
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                Гарантии ПРЯМО — по итогам разбора 100 отзывов Яндекс Go
+              </p>
+              <ul className="mt-2.5 space-y-2 text-[11px] leading-relaxed">
+                {[
+                  'Точка подачи видна вам и водителю одинаково — расхождение = ошибка карты, компенсация автоматом',
+                  'Платное ожидание — только после 10 минут и с уведомлением, задним числом не включится',
+                  'Водитель отменил после «выехал» — компенсация на счёт без «промокод вместо денег»',
+                  'Поддержка — живой человек, ответ ≤ 15 минут; статус жалобы виден по трекингу',
+                ].map((g) => (
+                  <li key={g} className="flex items-start gap-2 text-zinc-300">
+                    <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" aria-hidden />
+                    {g}
+                  </li>
+                ))}
+              </ul>
             </div>
             <button className="flex w-full items-center justify-between rounded-2xl border border-amber-400/25 bg-amber-400/5 p-4 text-left transition-colors hover:border-amber-400/40">
               <span className="flex items-center gap-3">

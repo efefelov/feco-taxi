@@ -38,6 +38,7 @@ import { openMvpApp } from '@/components/pryamo/mvp'
 /** Прямые ссылки верхнего уровня */
 const NAV = [
   { href: '#problem', label: 'Проблема' },
+  { href: '#reviews', label: 'Отзывы' },
   { href: '#compare', label: 'Сравнение' },
   { href: '#demo', label: 'Живое демо' },
   { href: '#shift', label: 'Смена' },

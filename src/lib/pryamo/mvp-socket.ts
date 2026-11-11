@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { io, type Socket } from 'socket.io-client'
+import { localEngine, LOCAL_ZONES, LOCAL_DRIVER } from './mvp-local'
 import type {
   EarningsToday,
   OrderDTO,
@@ -20,7 +21,13 @@ import type {
  * (mvp:book), принятие связывает сессии обоих (driver:accept → общая
  * ride:state), водитель управляет этапами (driver:advance), пассажир
  * может отменить поиск (mvp:cancel).
+ *
+ * Офлайн-режим: если движок недоступен (статик-прод GitHub Pages, закрытый
+ * порт), через ~3,5 секунды хуки переключаются на локальный мини-движок
+ * (mvp-local.ts) с тем же контрактом — обе роли продолжают работать.
  */
+
+const LOCAL_FALLBACK_MS = 3500
 
 export interface MvpPassengerHandlers {
   onRideState: (ride: RideDTO) => void
@@ -33,6 +40,7 @@ export interface MvpPassengerHandlers {
 export function useMvpPassenger(handlers: MvpPassengerHandlers) {
   const socketRef = useRef<Socket | null>(null)
   const [connected, setConnected] = useState(false)
+  const [localMode, setLocalMode] = useState(false)
   const [zones, setZones] = useState<ZoneDTO[]>([])
   const handlersRef = useRef(handlers)
 
@@ -51,6 +59,7 @@ export function useMvpPassenger(handlers: MvpPassengerHandlers) {
     socketRef.current = s
     s.on('connect', () => {
       setConnected(true)
+      setLocalMode(false)
       s.emit('passenger:join', {})
     })
     s.on('disconnect', () => setConnected(false))
@@ -71,23 +80,53 @@ export function useMvpPassenger(handlers: MvpPassengerHandlers) {
     }
   }, [])
 
-  const book = useCallback((payload: { from: string; to: string; tariffId: string }) => {
-    socketRef.current?.emit('mvp:book', payload)
+  // Переключение на локальный движок: если подключение не состоялось
+  // за LOCAL_FALLBACK_MS — работаем офлайн (тот же контракт)
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      if (!socketRef.current?.connected) setLocalMode(true)
+    }, LOCAL_FALLBACK_MS)
+    return () => window.clearTimeout(t)
   }, [])
+
+  useEffect(() => {
+    if (!localMode) return
+    localEngine.joinPassenger(handlers)
+    return () => localEngine.leavePassenger()
+  }, [localMode, handlers])
+
+  const book = useCallback(
+    (payload: { from: string; to: string; tariffId: string }) => {
+      if (localMode) localEngine.book(payload)
+      else socketRef.current?.emit('mvp:book', payload)
+    },
+    [localMode]
+  )
 
   const cancel = useCallback(() => {
-    socketRef.current?.emit('mvp:cancel', {})
-  }, [])
+    if (localMode) localEngine.cancel()
+    else socketRef.current?.emit('mvp:cancel', {})
+  }, [localMode])
 
-  const rate = useCallback((payload: {
-    rideId: string
-    axes: { punctuality: number; driving: number; comfort: number; cleanliness: number }
-    tip: number
-  }) => {
-    socketRef.current?.emit('ride:rate', payload)
-  }, [])
+  const rate = useCallback(
+    (payload: {
+      rideId: string
+      axes: { punctuality: number; driving: number; comfort: number; cleanliness: number }
+      tip: number
+    }) => {
+      if (localMode) localEngine.rate(payload.rideId, payload.tip)
+      else socketRef.current?.emit('ride:rate', payload)
+    },
+    [localMode]
+  )
 
-  return { book, cancel, rate, connected, zones }
+  return {
+    book,
+    cancel,
+    rate,
+    connected: localMode || connected,
+    zones: localMode ? LOCAL_ZONES : zones,
+  }
 }
 
 export interface MvpDriverHandlers {
@@ -100,6 +139,7 @@ export interface MvpDriverHandlers {
 export function useMvpDriver(handlers: MvpDriverHandlers) {
   const socketRef = useRef<Socket | null>(null)
   const [connected, setConnected] = useState(false)
+  const [localMode, setLocalMode] = useState(false)
   const [online, setOnline] = useState(false)
   const [orders, setOrders] = useState<OrderDTO[]>([])
   const [identity, setIdentity] = useState<RideDriver | null>(null)
@@ -135,6 +175,7 @@ export function useMvpDriver(handlers: MvpDriverHandlers) {
 
     s.on('connect', () => {
       setConnected(true)
+      setLocalMode(false)
       s.emit('driver:join', {})
       // после переподключения восстанавливаем онлайн-статус, если был
       setOnline((was) => {
@@ -173,30 +214,77 @@ export function useMvpDriver(handlers: MvpDriverHandlers) {
     }
   }, [])
 
+  // Офлайн-режим: тот же контракт на локальном мини-движке
+  useEffect(() => {
+    if (!localMode) return
+    localEngine.joinDriver(handlers)
+    setIdentity(LOCAL_DRIVER)
+    setOnline(localEngine.isDriverOnline())
+    const snap = localEngine.driverSnapshot()
+    setOrders(snap.orders)
+    setEarnings(snap.earnings)
+    setWeek(snap.week)
+    setLastRides(snap.lastRides)
+    // Срез состояния обновляем каждые 2 с: лента, доход, неделя
+    const t = window.setInterval(() => {
+      const s2 = localEngine.driverSnapshot()
+      setOrders(s2.orders)
+      setEarnings(s2.earnings)
+      setWeek(s2.week)
+      setLastRides(s2.lastRides)
+    }, 2000)
+    return () => {
+      window.clearInterval(t)
+      localEngine.leaveDriver()
+    }
+  }, [localMode, handlers])
+
   const goOnline = useCallback(() => {
-    socketRef.current?.emit('driver:go-online', {})
-    setOnline(true)
-  }, [])
+    if (localMode) {
+      localEngine.goOnline()
+      setOnline(true)
+      const snap = localEngine.driverSnapshot()
+      setEarnings(snap.earnings)
+      setWeek(snap.week)
+    } else {
+      socketRef.current?.emit('driver:go-online', {})
+      setOnline(true)
+    }
+  }, [localMode])
 
   const goOffline = useCallback(() => {
-    socketRef.current?.emit('driver:go-offline', {})
-    setOnline(false)
-  }, [])
+    if (localMode) {
+      localEngine.goOffline()
+      setOnline(false)
+    } else {
+      socketRef.current?.emit('driver:go-offline', {})
+      setOnline(false)
+    }
+  }, [localMode])
 
-  const accept = useCallback((orderId: string) => {
-    socketRef.current?.emit('driver:accept', { orderId })
-  }, [])
+  const accept = useCallback(
+    (orderId: string) => {
+      if (localMode) localEngine.accept(orderId)
+      else socketRef.current?.emit('driver:accept', { orderId })
+    },
+    [localMode]
+  )
 
-  const decline = useCallback((orderId: string) => {
-    socketRef.current?.emit('driver:decline', { orderId })
-  }, [])
+  const decline = useCallback(
+    (orderId: string) => {
+      if (localMode) localEngine.decline(orderId)
+      else socketRef.current?.emit('driver:decline', { orderId })
+    },
+    [localMode]
+  )
 
   const advance = useCallback(() => {
-    socketRef.current?.emit('driver:advance', {})
-  }, [])
+    if (localMode) localEngine.advance()
+    else socketRef.current?.emit('driver:advance', {})
+  }, [localMode])
 
   return {
-    connected,
+    connected: localMode || connected,
     online,
     orders,
     identity,

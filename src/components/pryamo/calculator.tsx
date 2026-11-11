@@ -17,6 +17,7 @@ import {
 import { Slider } from '@/components/ui/slider'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { CalculatorResult } from '@/lib/pryamo/types'
+import { computeCalculator } from '@/lib/pryamo/calculator-core'
 import { rub } from '@/lib/pryamo/format'
 import { cn } from '@/lib/utils'
 
@@ -124,8 +125,10 @@ export function IncomeCalculator() {
       })
       const d = (await r.json()) as CalculatorResult
       setResult(d)
-    } catch {
-      /* aborted or network error — keep old result */
+    } catch (e) {
+      // Статик-прод (GitHub Pages) без API: считаем локально по той же формуле
+      if ((e as Error)?.name === 'AbortError') return
+      setResult(computeCalculator(v))
     } finally {
       if (!ac.signal.aborted) setLoading(false)
     }

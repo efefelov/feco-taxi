@@ -4,6 +4,7 @@ import { Navbar } from '@/components/pryamo/navbar'
 import { Hero } from '@/components/pryamo/hero'
 import { MarketSection } from '@/components/pryamo/market'
 import { PainPoints } from '@/components/pryamo/pain-points'
+import { YandexLessons } from '@/components/pryamo/yandex-lessons'
 import { Comparison } from '@/components/pryamo/comparison'
 import { Competitors } from '@/components/pryamo/competitors'
 import { TariffsSection } from '@/components/pryamo/tariffs'
@@ -38,6 +39,7 @@ export default function Home() {
         <Hero />
         <MarketSection />
         <PainPoints />
+        <YandexLessons />
         <Comparison />
         <Competitors />
         <TariffsSection />

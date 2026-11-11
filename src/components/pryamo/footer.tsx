@@ -2,6 +2,14 @@
 
 import { Zap, ShieldCheck, ArrowUpRight } from 'lucide-react'
 
+/**
+ * Префикс basePath для абсолютных ссылок (файлы в /docs): на статик-проде
+ * GitHub Pages приложение живёт в подпапке /feco-taxi — задаётся на сборке
+ * через NEXT_PUBLIC_BASE_PATH, локально и в серверном проде — пусто.
+ */
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? ''
+const withBase = (href: string) => (BASE_PATH && href.startsWith('/') ? BASE_PATH + href : href)
+
 const FOOTER_NAV: {
   title: string
   links: { href: string; label: string; download?: boolean; newTab?: boolean }[]
@@ -110,7 +118,7 @@ export function Footer() {
                   {col.links.map((l) => (
                     <li key={l.href + l.label}>
                       <a
-                        href={l.href}
+                        href={withBase(l.href)}
                         download={l.download || undefined}
                         target={l.newTab ? '_blank' : undefined}
                         rel={l.newTab ? 'noreferrer' : undefined}

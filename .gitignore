@@ -56,3 +56,7 @@ server.log
 public/*.zip
 public/pryamo-ws-*
 tool-results/
+
+# статик-сборка и деплой GitHub Pages
+.api-static-stash/
+.deploy-pages/

@@ -151,7 +151,23 @@ export function Waitlist() {
       setJoined({ position: d.position ?? 0, message: d.message })
       toast({ title: 'Заявка принята', description: d.message })
     } catch {
-      toast({ title: 'Сеть недоступна', description: 'Попробуйте ещё раз через минуту.' })
+      // Статик-прод (GitHub Pages) без сервера: сохраняем заявку локально
+      try {
+        const raw = window.localStorage.getItem('pryamo-waitlist-local')
+        const arr: unknown = raw ? JSON.parse(raw) : []
+        arr.push({ role, name, phone, city, at: new Date().toISOString() })
+        window.localStorage.setItem('pryamo-waitlist-local', JSON.stringify(arr))
+        setJoined({
+          position: (Array.isArray(arr) ? arr.length : 1) + 0,
+          message: 'Заявка сохранена в этом браузере — это демо-прод без сервера.',
+        })
+        toast({
+          title: 'Демо-режим',
+          description: 'Заявка сохранена в этом браузере — прод работает без сервера.',
+        })
+      } catch {
+        toast({ title: 'Сеть недоступна', description: 'Попробуйте ещё раз через минуту.' })
+      }
     } finally {
       setLoading(false)
     }
