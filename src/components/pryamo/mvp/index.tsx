@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Smartphone, User, CarFront, X, Zap, ArrowRight, Radio } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useEngineStatus } from '@/lib/pryamo/socket'
+import { useMvpLocalMode } from '@/lib/pryamo/mvp-local'
 import { PassengerApp } from './passenger-app'
 import { DriverApp } from './driver-app'
 
@@ -24,6 +25,14 @@ export function MvpApp() {
   const [role, setRole] = useState<Role>('passenger')
   const { connected, fresh } = useEngineStatus()
   const engineOnline = connected && fresh
+  const localMode = useMvpLocalMode()
+  // На статик-проде движка нет — работает локальный мини-движок в браузере
+  const liveLabel = engineOnline ? 'прототип · движок live' : 'прототип · демо в браузере'
+  const statusLabel = engineOnline
+    ? 'движок демо: онлайн, заказы и спрос живые'
+    : localMode
+      ? 'локальный движок — демо прямо в браузере, поездка пройдёт целиком'
+      : 'движок переподключается…'
 
   const openApp = useCallback((r: Role) => {
     setRole(r)
@@ -84,7 +93,7 @@ export function MvpApp() {
                 <div className="leading-none">
                   <p className="text-xl font-black tracking-tight text-white">ПРЯМО MVP</p>
                   <p className="mt-1 text-[10px] font-medium uppercase tracking-[0.22em] text-emerald-400">
-                    прототип · движок live
+                    {liveLabel}
                   </p>
                 </div>
               </div>
@@ -131,9 +140,7 @@ export function MvpApp() {
                   )}
                   aria-hidden
                 />
-                {engineOnline
-                  ? 'движок демо: онлайн, заказы и спрос живые'
-                  : 'движок переподключается…'}
+                {statusLabel}
               </div>
 
               <div className="mt-6 space-y-2 text-[11px] leading-relaxed text-zinc-600">

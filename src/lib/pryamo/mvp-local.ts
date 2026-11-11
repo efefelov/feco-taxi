@@ -1,3 +1,6 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import { estimatePrice } from '@/lib/pryamo/format'
 import { TARIFF_FALLBACK } from '@/lib/pryamo/tariff-fallback'
 import type {
@@ -35,6 +38,31 @@ export interface LocalDriverHandlers {
 }
 
 // ===== Статика для офлайн-режима =====
+
+// ===== Индикация офлайн-режима для интерфейса =====
+
+let localModeActive = false
+const localModeListeners = new Set<(v: boolean) => void>()
+
+/** Хуки MVP вызывают при переключении на локальный движок */
+export function setLocalModeActive(v: boolean) {
+  if (v !== localModeActive) {
+    localModeActive = v
+    localModeListeners.forEach((f) => f(v))
+  }
+}
+
+/** Подписка для UI: работает ли MVP прямо сейчас на локальном движке */
+export function useMvpLocalMode(): boolean {
+  const [v, setV] = useState(localModeActive)
+  useEffect(() => {
+    localModeListeners.add(setV)
+    return () => {
+      localModeListeners.delete(setV)
+    }
+  }, [])
+  return v
+}
 
 export const LOCAL_ZONES: ZoneDTO[] = [
   { id: 'center', name: 'Центр', x: 50, y: 42, demand: 72, surge: 1.2, waitingDrivers: 14, ordersWaiting: 6, avgWaitMin: 3 },
@@ -177,6 +205,7 @@ function tickOnboard(ride: RideDTO) {
 }
 
 function assignRide(order: OrderDTO, driver: RideDriver, auto: boolean) {
+  clearTimers()
   const km = order.distanceKm
   const etaMin = 3 + Math.round(Math.random() * 4)
   const ride: RideDTO = {
@@ -212,9 +241,13 @@ function pushOrder(order: OrderDTO) {
   state.order = order
   if (state.driver && state.driverOnline) state.driver.onOrderNew?.(order)
   // Страховка от тупика: если водитель офлайн или не принял за 5 секунд —
-  // берёт автоматический «движковый» водитель (демо должно завершаться)
+  // берёт автоматический «движковый» водитель (демо должно завершаться).
+  // Статус searching — тоже активная поездка, поэтому проверяем статус, а не null
   later(() => {
-    if (state.order && state.order.id === order.id && !state.ride) {
+    const stillSearching =
+      state.order?.id === order.id &&
+      (!state.ride || state.ride.status === 'searching')
+    if (stillSearching) {
       assignRide(order, LOCAL_DRIVER, true)
     }
   }, 5000)
@@ -300,7 +333,9 @@ export const localEngine = {
   },
   accept(orderId: string) {
     const order = state.order
-    if (!order || order.id !== orderId || state.ride) {
+    // searching — заказ ещё свободен, брать можно
+    const taken = state.ride && state.ride.status !== 'searching'
+    if (!order || order.id !== orderId || taken) {
       state.driver?.onAcceptFailed(orderId, 'taken')
       return
     }

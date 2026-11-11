@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { io, type Socket } from 'socket.io-client'
-import { localEngine, LOCAL_ZONES, LOCAL_DRIVER } from './mvp-local'
+import { localEngine, LOCAL_ZONES, LOCAL_DRIVER, setLocalModeActive } from './mvp-local'
 import type {
   EarningsToday,
   OrderDTO,
@@ -60,6 +60,7 @@ export function useMvpPassenger(handlers: MvpPassengerHandlers) {
     s.on('connect', () => {
       setConnected(true)
       setLocalMode(false)
+      setLocalModeActive(false)
       s.emit('passenger:join', {})
     })
     s.on('disconnect', () => setConnected(false))
@@ -88,6 +89,10 @@ export function useMvpPassenger(handlers: MvpPassengerHandlers) {
     }, LOCAL_FALLBACK_MS)
     return () => window.clearTimeout(t)
   }, [])
+
+  useEffect(() => {
+    if (localMode) setLocalModeActive(true)
+  }, [localMode])
 
   useEffect(() => {
     if (!localMode) return
@@ -176,6 +181,7 @@ export function useMvpDriver(handlers: MvpDriverHandlers) {
     s.on('connect', () => {
       setConnected(true)
       setLocalMode(false)
+      setLocalModeActive(false)
       s.emit('driver:join', {})
       // после переподключения восстанавливаем онлайн-статус, если был
       setOnline((was) => {
