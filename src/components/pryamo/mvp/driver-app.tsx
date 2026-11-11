@@ -668,8 +668,8 @@ export function DriverApp({ onOpenPassenger }: { onOpenPassenger?: () => void })
                 },
                 {
                   icon: ShieldCheck,
-                  title: 'Оспорить оценку — за 1 минуту',
-                  body: 'апелляция на любую 1★: в отзывах Яндекс Про — «единицу от клиента не оспорить», у нас оспорить можно',
+                  title: 'Причина каждой низкой оценки — на виду',
+                  body: 'в отзывах Яндекс Про: «единицу от клиента не оспорить». У нас каждая оценка ≤3★ приходит с причиной от пассажира — вы видите, что именно улучшить, а не спорите вслепую',
                 },
                 {
                   icon: Banknote,
@@ -695,6 +695,45 @@ export function DriverApp({ onOpenPassenger }: { onOpenPassenger?: () => void })
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Обратная связь по оценкам: суть «убийцы» — водитель знает, за что 1★ */}
+            <div className="rounded-2xl border border-amber-400/25 bg-amber-400/5 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-300">
+                Обратная связь по каждой оценке
+              </p>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-400">
+                Низкая оценка без причины технически невозможна: пассажир ставит ≤3★ — и
+                обязан выбрать, что случилось. Вы видите причины и подсказку, что улучшить.
+              </p>
+              <div className="mt-3 space-y-2">
+                {[
+                  {
+                    axis: 'Пунктуальность · 2★',
+                    reason: '«Опоздал» — подача 14 мин вместо 6',
+                    tip: 'Подсказка: закладывайте 10 минут на выезд и включайте режим «еду к пассажиру» вовремя',
+                  },
+                  {
+                    axis: 'Комфорт · 3★',
+                    reason: '«Громкая музыка»',
+                    tip: 'Подсказка: спросите вкус пассажира до старта поездки или сбавьте на 20%',
+                  },
+                ].map((fb) => (
+                  <div key={fb.axis} className="rounded-xl border border-zinc-700/60 bg-zinc-950/50 p-3">
+                    <p className="flex items-center gap-1.5 text-[11px] font-bold text-zinc-200">
+                      <Star className="h-3 w-3 fill-amber-400 text-amber-400" aria-hidden />
+                      {fb.axis}
+                    </p>
+                    <p className="mt-1 text-[10px] text-zinc-400">Причина: {fb.reason}</p>
+                    <p className="mt-0.5 text-[10px] text-emerald-300/80">{fb.tip}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-2.5 text-[10px] leading-relaxed text-zinc-500">
+                Так рейтинг работает на рост, а не на страх: в Яндекс Про водители писали,
+                что «единицу от клиента не оспорить» — у нас оценивать вслепую нельзя ни
+                пассажиру, ни платформе.
+              </p>
             </div>
           </div>
         )}

@@ -45,6 +45,12 @@ import {
 } from '@/lib/pryamo/mvp-storage'
 import { pickupDemand, surgeLabel } from '@/lib/pryamo/pickup-zone'
 import { TARIFF_FALLBACK } from '@/lib/pryamo/tariff-fallback'
+import {
+  CANONICAL_TARIFF_NAMES,
+  GENERATIONS,
+  tariffDisplayName,
+  useGeneration,
+} from '@/lib/pryamo/generations'
 import type { Receipt, RideDTO, Tariff } from '@/lib/pryamo/types'
 
 const ADDRESS_PRESETS = [
@@ -70,6 +76,20 @@ const PAYMENTS = [
 
 type Payment = (typeof PAYMENTS)[number]['id']
 type Screen = 'home' | 'live' | 'receipt'
+
+/**
+ * Причины низких оценок (≤3★) по осям — обратная связь для водителя.
+ * Смысл «убийцы»: водитель должен знать, за что получил 1★, чтобы не
+ * повторять ошибку. Оценка без причины технически невозможна.
+ */
+const RATING_REASONS: Record<keyof typeof DEFAULT_AXES, string[]> = {
+  punctuality: ['Опоздал', 'Долго ждала подачу', 'Ехал не туда'],
+  driving: ['Резко тормозил', 'Гнал', 'Опасные манёвры'],
+  comfort: ['Громкая музыка', 'Навязчивый разговор', 'Запах в салоне'],
+  cleanliness: ['Мусор в салоне', 'Грязные сиденья', 'Посторонние вещи'],
+}
+
+const DEFAULT_AXES = { punctuality: 5, driving: 5, comfort: 5, cleanliness: 5 }
 
 function hash01(s: string, salt = 0): number {
   let h = 2166136261 ^ salt
@@ -112,10 +132,14 @@ export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
     savePassengerHistory(history)
   }, [history])
 
-  // Рейтинг 2.0 по осям + чаевые
-  const [axes, setAxes] = useState({ punctuality: 5, driving: 5, comfort: 5, cleanliness: 5 })
+  // Рейтинг 2.0 по осям + причины низкой оценки + чаевые
+  const [axes, setAxes] = useState({ ...DEFAULT_AXES })
+  const [reasons, setReasons] = useState<string[]>([])
   const [tip, setTip] = useState(0)
   const [rated, setRated] = useState(false)
+
+  // Поколение: год рождения → персональные названия тарифов
+  const { birthYear, setBirthYear, generation } = useGeneration()
 
   const screenRef = useRef<Screen>('home')
   useEffect(() => {
@@ -222,7 +246,8 @@ export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
     setReceipt(null)
     setRated(false)
     setFailReason(null)
-    setAxes({ punctuality: 5, driving: 5, comfort: 5, cleanliness: 5 })
+    setAxes({ ...DEFAULT_AXES })
+    setReasons([])
     setTip(0)
     setScreen('live')
     setTab('ride')
@@ -238,7 +263,7 @@ export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
 
   const submitRate = () => {
     if (!ride) return
-    rate({ rideId: ride.id, axes, tip })
+    rate({ rideId: ride.id, axes, tip, reasons })
     setHistory((prev) => {
       const next = [...prev]
       if (next[0] && next[0].ride.id === ride.id) {
@@ -246,6 +271,10 @@ export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
       }
       return next
     })
+  }
+
+  const toggleReason = (r: string) => {
+    setReasons((prev) => (prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r]))
   }
 
   return (
@@ -362,28 +391,41 @@ export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
                       Класс машины
                     </p>
                     <div className="pryamo-scroll flex gap-2 overflow-x-auto pb-1">
-                      {tariffs.slice(0, 6).map((t) => (
-                        <button
-                          key={t.id}
-                          onClick={() => setTariffId(t.id)}
-                          className={cn(
-                            'min-w-[104px] shrink-0 rounded-xl border p-3 text-left transition-all',
-                            tariffId === t.id
-                              ? 'border-emerald-500 bg-emerald-500/10'
-                              : 'border-zinc-700 bg-zinc-950/40 hover:border-zinc-600'
-                          )}
-                          aria-pressed={tariffId === t.id}
-                        >
-                          <p className="text-xs font-bold text-white">{t.name}</p>
-                          <p className="mt-1 text-sm font-black tabular-nums text-emerald-400">
-                            {rub(estimatePrice(t, distanceKm, durationMin))}
-                          </p>
-                          <p className="mt-0.5 text-[10px] text-zinc-500">
-                            подача ~{4 + Math.floor(hash01(t.id) * 5)} мин
-                          </p>
-                        </button>
-                      ))}
+                      {tariffs.slice(0, 6).map((t) => {
+                        const personalName = tariffDisplayName(t.id, generation)
+                        return (
+                          <button
+                            key={t.id}
+                            onClick={() => setTariffId(t.id)}
+                            className={cn(
+                              'min-w-[104px] shrink-0 rounded-xl border p-3 text-left transition-all',
+                              tariffId === t.id
+                                ? 'border-emerald-500 bg-emerald-500/10'
+                                : 'border-zinc-700 bg-zinc-950/40 hover:border-zinc-600'
+                            )}
+                            aria-pressed={tariffId === t.id}
+                            title={CANONICAL_TARIFF_NAMES[t.id] ?? t.name}
+                          >
+                            <p className="text-xs font-bold text-white">{personalName}</p>
+                            <p className="mt-1 text-sm font-black tabular-nums text-emerald-400">
+                              {rub(estimatePrice(t, distanceKm, durationMin))}
+                            </p>
+                            <p className="mt-0.5 text-[10px] text-zinc-500">
+                              подача ~{4 + Math.floor(hash01(t.id) * 5)} мин
+                            </p>
+                          </button>
+                        )
+                      })}
                     </div>
+                    {generation && generation !== 'millennial' && (
+                      <p className="mt-1.5 text-[10px] leading-snug text-zinc-500">
+                        Названия — под ваше поколение. Канон и цены одни для всех:{' '}
+                        {tariffs
+                          .slice(0, 6)
+                          .map((t) => CANONICAL_TARIFF_NAMES[t.id] ?? t.name)
+                          .join(', ')}
+                      </p>
+                    )}
                   </div>
 
                   {/* Оплата + комментарий */}
@@ -698,7 +740,7 @@ export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
                     <div className="mt-4">
                       <p className="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
                         <Star className="h-3 w-3 text-amber-400" aria-hidden />
-                        Рейтинг 2.0 — по осям, с апелляцией
+                        Рейтинг 2.0 — по осям, с обратной связью
                       </p>
                       <div className="space-y-1.5">
                         {(
@@ -709,30 +751,57 @@ export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
                             ['cleanliness', 'Чистота'],
                           ] as const
                         ).map(([key, label]) => (
-                          <div
-                            key={key}
-                            className="flex items-center justify-between rounded-lg bg-zinc-950/50 px-3 py-1.5"
-                          >
-                            <span className="text-xs text-zinc-300">{label}</span>
-                            <div className="flex gap-0.5">
-                              {[1, 2, 3, 4, 5].map((s) => (
-                                <button
-                                  key={s}
-                                  onClick={() => setAxes((a) => ({ ...a, [key]: s }))}
-                                  aria-label={`${label}: ${s}`}
-                                  className="p-0.5"
-                                >
-                                  <Star
-                                    className={cn(
-                                      'h-4 w-4 transition-colors',
-                                      axes[key] >= s
-                                        ? 'fill-amber-400 text-amber-400'
-                                        : 'text-zinc-600 hover:text-zinc-400'
-                                    )}
-                                  />
-                                </button>
-                              ))}
+                          <div key={key}>
+                            <div
+                              className="flex items-center justify-between rounded-lg bg-zinc-950/50 px-3 py-1.5"
+                            >
+                              <span className="text-xs text-zinc-300">{label}</span>
+                              <div className="flex gap-0.5">
+                                {[1, 2, 3, 4, 5].map((s) => (
+                                  <button
+                                    key={s}
+                                    onClick={() => setAxes((a) => ({ ...a, [key]: s }))}
+                                    aria-label={`${label}: ${s}`}
+                                    className="p-0.5"
+                                  >
+                                    <Star
+                                      className={cn(
+                                        'h-4 w-4 transition-colors',
+                                        axes[key] >= s
+                                          ? 'fill-amber-400 text-amber-400'
+                                          : 'text-zinc-600 hover:text-zinc-400'
+                                      )}
+                                    />
+                                  </button>
+                                ))}
+                              </div>
                             </div>
+                            {/* Низкая оценка → выбираем причину: обратная связь, а не голословная 1★ */}
+                            {axes[key] <= 3 && (
+                              <div className="mt-1.5 rounded-lg border border-amber-400/25 bg-amber-400/5 p-2">
+                                <p className="text-[10px] font-bold leading-snug text-amber-300">
+                                  Что случилось? Водитель получит это вместе с оценкой — чтобы не
+                                  повторить
+                                </p>
+                                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                  {RATING_REASONS[key].map((r) => (
+                                    <button
+                                      key={r}
+                                      onClick={() => toggleReason(r)}
+                                      aria-pressed={reasons.includes(r)}
+                                      className={cn(
+                                        'rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-all',
+                                        reasons.includes(r)
+                                          ? 'border-amber-400 bg-amber-400/20 text-amber-200'
+                                          : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'
+                                      )}
+                                    >
+                                      {r}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -768,7 +837,11 @@ export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
                   ) : (
                     <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 text-xs text-emerald-200">
                       <BadgeCheck className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
-                      Спасибо! Оценка сохранена{tip > 0 ? `, чаевые ${rub(tip)} переданы водителю полностью` : ''}.
+                      <span>
+                        Спасибо! Оценка сохранена
+                        {reasons.length ? ', причины переданы водителю' : ''}
+                        {tip > 0 ? `, чаевые ${rub(tip)} переданы водителю полностью` : ''}.
+                      </span>
                     </div>
                   )}
 
@@ -869,6 +942,44 @@ export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
                   </p>
                 </div>
               </div>
+            </div>
+
+            {/* Год рождения → персональные названия тарифов */}
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                Год рождения — названия тарифов под вас
+              </p>
+              <div className="mt-2.5 flex items-center gap-2.5">
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  min={1930}
+                  max={new Date().getFullYear() - 15}
+                  value={birthYear ?? ''}
+                  onChange={(e) => {
+                    const v = Number(e.target.value)
+                    setBirthYear(
+                      Number.isInteger(v) && v >= 1930 && v <= new Date().getFullYear() - 15
+                        ? v
+                        : null
+                    )
+                  }}
+                  placeholder="1978"
+                  aria-label="Год рождения"
+                  className="w-28 border-zinc-700 bg-zinc-950/60 text-sm text-white placeholder:text-zinc-600"
+                />
+                {generation && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold text-emerald-300">
+                    <Gift className="h-3.5 w-3.5" aria-hidden />
+                    {GENERATIONS.find((g) => g.id === generation)?.label}
+                  </span>
+                )}
+              </div>
+              <p className="mt-2 text-[10px] leading-relaxed text-zinc-500">
+                Цены и формула одни для всех — подстраиваются только слова. Для «Ладного»:
+                зумер увидит «Вайб», серебряный возраст — «Тёплый». Убрать год — вернётся
+                канон.
+              </p>
             </div>
 
             {/* Гарантии по итогам разбора отзывов Яндекса (см. yandex-reviews.ts) */}

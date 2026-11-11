@@ -154,7 +154,7 @@ export function Waitlist() {
       // Статик-прод (GitHub Pages) без сервера: сохраняем заявку локально
       try {
         const raw = window.localStorage.getItem('pryamo-waitlist-local')
-        const arr: unknown = raw ? JSON.parse(raw) : []
+        const arr = (raw ? JSON.parse(raw) : []) as unknown[]
         arr.push({ role, name, phone, city, at: new Date().toISOString() })
         window.localStorage.setItem('pryamo-waitlist-local', JSON.stringify(arr))
         setJoined({

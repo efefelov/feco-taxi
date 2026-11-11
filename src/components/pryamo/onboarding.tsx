@@ -29,6 +29,8 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { useOnboarding } from '@/lib/pryamo/onboarding-store'
+import { GENERATIONS, useGeneration } from '@/lib/pryamo/generations'
+import { tariffDisplayName } from '@/lib/pryamo/generations'
 import { rub } from '@/lib/pryamo/format'
 
 /**
@@ -39,7 +41,7 @@ import { rub } from '@/lib/pryamo/format'
  */
 
 type Plan = 'percent' | 'pro'
-type Step = 0 | 1 | 2
+type Step = 0 | 1 | 2 | 3
 
 // Математика поездки (совпадает с цифрами hero: 540 ₽ чек)
 const RIDE_PRICE = 540
@@ -49,9 +51,10 @@ const YANDEX_PAYOUT = 324 // 60% от чека
 const YANDEX_TOTAL_TAKE = 216
 
 const STEPS_META = [
-  { n: 1, title: 'Регистрация', hint: '2 минуты, 0 ₽' },
-  { n: 2, title: 'Первый заказ', hint: '30 секунд' },
-  { n: 3, title: 'Выплата', hint: 'мгновенно' },
+  { n: 1, title: 'Знакомство', hint: '10 секунд' },
+  { n: 2, title: 'Регистрация', hint: '2 минуты, 0 ₽' },
+  { n: 3, title: 'Первый заказ', hint: '30 секунд' },
+  { n: 4, title: 'Выплата', hint: 'мгновенно' },
 ] as const
 
 export function OnboardingWizard() {
@@ -87,6 +90,13 @@ export function OnboardingWizard() {
 function WizardBody({ onJoin }: { onJoin: () => void }) {
   const [step, setStep] = useState<Step>(0)
   const [plan, setPlan] = useState<Plan>('percent')
+  // Год рождения: персональные названия тарифов (цены — одни для всех)
+  const { birthYear, setBirthYear, generation } = useGeneration()
+  const namesPreview = {
+    eco: tariffDisplayName('eco', generation),
+    comfort: tariffDisplayName('comfort', generation),
+    business: tariffDisplayName('business', generation),
+  }
 
   const payoutTotal = plan === 'pro' ? RIDE_PRICE + TIP : RIDE_PRICE - PRYAMO_COMMISSION + TIP
   const planLabel = plan === 'pro' ? 'Pro · 0% комиссии' : '12% фикс'
@@ -134,9 +144,85 @@ function WizardBody({ onJoin }: { onJoin: () => void }) {
           </ol>
 
           <AnimatePresence mode="wait" initial={false}>
+            {/* Шаг 1: знакомство — год рождения и персональные названия тарифов */}
             {step === 0 && (
               <motion.div
                 key="step-0"
+                initial={{ opacity: 0, x: 18 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -18 }}
+                transition={{ duration: 0.25 }}
+              >
+                <h3 className="text-base font-bold text-zinc-100">
+                  ПРЯМО знает, с кем разговаривает
+                </h3>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Укажите год рождения — названия тарифов подстроятся под вас. Цены и
+                  формула одни для всех: это слова, а не другой прайс.
+                </p>
+
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1930}
+                  max={new Date().getFullYear() - 15}
+                  value={birthYear ?? ''}
+                  onChange={(e) => {
+                    const v = Number(e.target.value)
+                    setBirthYear(
+                      Number.isInteger(v) && v >= 1930 && v <= new Date().getFullYear() - 15
+                        ? v
+                        : null
+                    )
+                  }}
+                  placeholder="Год рождения, например 1978"
+                  aria-label="Год рождения"
+                  className="mt-4 h-11 w-full rounded-lg border border-zinc-700 bg-zinc-950/60 px-3 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                />
+
+                {generation && (
+                  <div className="mt-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5">
+                    <p className="text-[11px] font-bold text-emerald-300">
+                      {GENERATIONS.find((g) => g.id === generation)?.label} ·{' '}
+                      {GENERATIONS.find((g) => g.id === generation)?.years}
+                    </p>
+                    <div className="mt-2 grid grid-cols-3 gap-2 text-center text-[11px]">
+                      {(
+                        [
+                          ['eco', 'эконом'],
+                          ['comfort', 'комфорт'],
+                          ['business', 'бизнес'],
+                        ] as const
+                      ).map(([id, kind]) => (
+                        <div key={id} className="rounded-lg bg-zinc-950/50 px-2 py-2">
+                          <p className="font-black text-zinc-100">{namesPreview[id]}</p>
+                          <p className="mt-0.5 text-[10px] text-zinc-500">{kind}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  onClick={() => setStep(1)}
+                  size="lg"
+                  className="mt-5 h-11 w-full bg-emerald-500 font-bold text-zinc-950 hover:bg-emerald-400"
+                >
+                  Дальше
+                  <ChevronRight className="ml-1 h-4 w-4" aria-hidden />
+                </Button>
+                <button
+                  onClick={() => setStep(1)}
+                  className="mt-2 w-full text-center text-xs text-zinc-500 underline-offset-2 hover:text-zinc-300 hover:underline"
+                >
+                  Пропустить — оставлю канонические названия
+                </button>
+              </motion.div>
+            )}
+
+            {step === 1 && (
+              <motion.div
+                key="step-1"
                 initial={{ opacity: 0, x: 18 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -18 }}
@@ -192,7 +278,7 @@ function WizardBody({ onJoin }: { onJoin: () => void }) {
                 </fieldset>
 
                 <Button
-                  onClick={() => setStep(1)}
+                  onClick={() => setStep(2)}
                   size="lg"
                   className="mt-5 h-11 w-full bg-emerald-500 font-bold text-zinc-950 hover:bg-emerald-400"
                 >
@@ -202,9 +288,9 @@ function WizardBody({ onJoin }: { onJoin: () => void }) {
               </motion.div>
             )}
 
-            {step === 1 && (
+            {step === 2 && (
               <motion.div
-                key="step-1"
+                key="step-2"
                 initial={{ opacity: 0, x: 18 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -18 }}
@@ -212,15 +298,15 @@ function WizardBody({ onJoin }: { onJoin: () => void }) {
               >
                 <FirstOrderStep
                   plan={plan}
-                  onDone={() => setStep(2)}
+                  onDone={() => setStep(3)}
                   planLabel={planLabel}
                 />
               </motion.div>
             )}
 
-            {step === 2 && (
+            {step === 3 && (
               <motion.div
-                key="step-2"
+                key="step-3"
                 initial={{ opacity: 0, x: 18 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -18 }}
