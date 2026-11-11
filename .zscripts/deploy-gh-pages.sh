@@ -26,7 +26,7 @@ if git show-ref --verify --quiet refs/heads/gh-pages; then
   git worktree add .deploy-pages gh-pages
   rm -rf .deploy-pages/* .deploy-pages/.nojekyll 2>/dev/null || true
 else
-  git worktree add --orphan .deploy-pages gh-pages
+  git worktree add --orphan -b gh-pages .deploy-pages
   rm -rf .deploy-pages/* 2>/dev/null || true
 fi
 
