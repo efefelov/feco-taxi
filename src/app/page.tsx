@@ -17,6 +17,7 @@ import { IncomeCalculator } from '@/components/pryamo/calculator'
 import { Monetization } from '@/components/pryamo/monetization'
 import { Fleets } from '@/components/pryamo/fleets'
 import { Compliance } from '@/components/pryamo/compliance'
+import { DriverReady } from '@/components/pryamo/driver-ready'
 import { RatingSection } from '@/components/pryamo/rating'
 import { Gamification } from '@/components/pryamo/gamification'
 import { Engineering } from '@/components/pryamo/engineering'
@@ -52,6 +53,7 @@ export default function Home() {
         <Monetization />
         <Fleets />
         <Compliance />
+        <DriverReady />
         <RatingSection />
         <Gamification />
         <Engineering />

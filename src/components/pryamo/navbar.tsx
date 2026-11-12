@@ -19,6 +19,7 @@ import {
   Smartphone,
   Trophy,
   Scale,
+  PackageCheck,
   TrendingUp,
   Wrench,
 } from 'lucide-react'
@@ -76,6 +77,7 @@ const PRODUCT_GROUPS: {
     links: [
       { href: '#fleets', label: 'Таксопаркам', desc: 'B2B-подключение', icon: Building2 },
       { href: '#law', label: 'Закон и отбор', desc: 'ФГИС, медосмотры, путёвки', icon: Scale },
+      { href: '#ready', label: 'Пакет водителя', desc: 'медосмотр, путевой, ОСАГО, приборы, Neiry', icon: PackageCheck },
       { href: '#founders', label: 'Инвесторам', desc: 'unit-экономика и маржа', icon: TrendingUp },
     ],
   },
