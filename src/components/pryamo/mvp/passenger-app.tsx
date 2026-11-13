@@ -91,6 +91,14 @@ const RATING_REASONS: Record<keyof typeof DEFAULT_AXES, string[]> = {
 
 const DEFAULT_AXES = { punctuality: 5, driving: 5, comfort: 5, cleanliness: 5 }
 
+/**
+ * Комплименты одним тапом — механизм против низкого отклика оценок
+ * (фактура: пассажиры оценивают 4–6 поездок из 15–18, ~30%). У Яндекса
+ * комплименты — основной канал («Приятная музыка 19», «Интересная беседа 13»):
+ * один тап вместо четырёх осей — отклик растёт, у водителя живёт добрая лента.
+ */
+const COMPLIMENTS = ['Пунктуальный', 'Аккуратно ведёт', 'Чистая машина', 'Приятная музыка', 'Душевная беседа']
+
 function hash01(s: string, salt = 0): number {
   let h = 2166136261 ^ salt
   for (let i = 0; i < s.length; i++) {
@@ -738,9 +746,43 @@ export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
 
                   {!rated ? (
                     <div className="mt-4">
+                      {/* Комплимент одним тапом: пассажиры оценивают лишь ~30% поездок
+                          (фактура: 4–6 оценок на 15–18 заказов) — снижаем порог усилия */}
+                      <p className="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                        <HandCoins className="h-3 w-3 text-emerald-400" aria-hidden />
+                        Комплимент одним тапом — отправится сразу
+                      </p>
+                      <div className="mb-3 flex flex-wrap gap-1.5">
+                        {COMPLIMENTS.map((c) => (
+                          <button
+                            key={c}
+                            onClick={() => {
+                              rate({
+                                rideId: ride!.id,
+                                axes: { punctuality: 5, driving: 5, comfort: 5, cleanliness: 5 },
+                                tip: 0,
+                                reasons: [c],
+                                compliment: true,
+                              })
+                              setRated(true)
+                              setHistory((prev) => {
+                                const next = [...prev]
+                                if (next[0] && next[0].ride.id === ride!.id) {
+                                  next[0] = { ...next[0], rated: true, tip: 0 }
+                                }
+                                return next
+                              })
+                            }}
+                            className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/20"
+                          >
+                            {c}
+                          </button>
+                        ))}
+                      </div>
+
                       <p className="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
                         <Star className="h-3 w-3 text-amber-400" aria-hidden />
-                        Рейтинг 2.0 — по осям, с обратной связью
+                        Или Рейтинг 2.0 — по осям, с обратной связью
                       </p>
                       <div className="space-y-1.5">
                         {(

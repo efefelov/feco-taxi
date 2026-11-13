@@ -735,6 +735,33 @@ export function DriverApp({ onOpenPassenger }: { onOpenPassenger?: () => void })
                 пассажиру, ни платформе.
               </p>
             </div>
+
+            {/* Отклик оценок: пассажиры оценивают ~30% поездок (фактура 4–6 из 15–18) */}
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                Отклик оценок — почему у вас их «мало»
+              </p>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-400">
+                Пассажиры ставят оценки в среднем на{' '}
+                <span className="font-bold text-zinc-200">4–6 поездок из 15–18</span> (~30%) —
+                так и у Яндекса. Это не ваша вина: оценка требует усилия, а пассажир уже дома.
+              </p>
+              <ul className="mt-2.5 space-y-1.5 text-[11px] leading-relaxed text-zinc-300">
+                <li className="flex items-start gap-2">
+                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" aria-hidden />
+                  комплименты одним тапом в чеке — усилие в одно нажатие вместо четырёх осей;
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" aria-hidden />
+                  чаевые в том же чеке — повод вернуться к экрану оценки;
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" aria-hidden />
+                  рейтинг считается по медиане последних оценок с сглаживанием — 5 оценок
+                  за неделю не обрушат ваш профиль и не спасут его от реальных проблем.
+                </li>
+              </ul>
+            </div>
           </div>
         )}
       </div>

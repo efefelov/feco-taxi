@@ -552,10 +552,16 @@ export const localEngine = {
       state.passenger?.onCancelled(false)
     }
   },
-  rate(rideId: string, tip: number, reasons?: string[]) {
+  rate(rideId: string, tip: number, reasons?: string[], compliment?: boolean) {
     void rideId
     const parts: string[] = []
-    if (reasons && reasons.length) parts.push(`водитель увидит причины: ${reasons.join(', ')}`)
+    if (reasons && reasons.length) {
+      parts.push(
+        compliment
+          ? `водитель получит комплименты: ${reasons.join(', ')}`
+          : `водитель увидит причины: ${reasons.join(', ')}`
+      )
+    }
     if (tip > 0) parts.push(`чаевые ${tip} ₽ переданы водителю полностью`)
     state.passenger?.onRated(
       parts.length ? `Оценка сохранена — ${parts.join('; ')}` : 'Оценка сохранена. Спасибо!'

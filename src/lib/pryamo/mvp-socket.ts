@@ -120,8 +120,10 @@ export function useMvpPassenger(handlers: MvpPassengerHandlers) {
       tip: number
       /** Причины низкой оценки — обратная связь для водителя */
       reasons?: string[]
+      /** true — это комплимент одним тапом (положительный фидбек), не жалоба */
+      compliment?: boolean
     }) => {
-      if (localMode) localEngine.rate(payload.rideId, payload.tip, payload.reasons)
+      if (localMode) localEngine.rate(payload.rideId, payload.tip, payload.reasons, payload.compliment)
       else socketRef.current?.emit('ride:rate', payload)
     },
     [localMode]
