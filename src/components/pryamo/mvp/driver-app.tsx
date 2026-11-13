@@ -88,6 +88,7 @@ export function DriverApp({ onOpenPassenger }: { onOpenPassenger?: () => void })
     earnings,
     week,
     lastRides,
+    zones,
     goOnline,
     goOffline,
     accept,
@@ -432,6 +433,59 @@ export function DriverApp({ onOpenPassenger }: { onOpenPassenger?: () => void })
                     <OrderCard key={o.id} order={o} onAccept={accept} onDecline={decline} />
                   ))}
                 </AnimatePresence>
+              </div>
+            )}
+
+            {/* Теплокарта зон: почему коэффициент именно такой — цифрами */}
+            {zones.length > 0 && online && (
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
+                <div className="flex items-center justify-between">
+                  <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                    <Flame className="h-3 w-3 text-amber-400" aria-hidden />
+                    Зоны · спрос прямо сейчас
+                  </p>
+                  <span className="text-[9px] text-zinc-600">заказы ждут / водители свободны</span>
+                </div>
+                <div className="mt-2.5 space-y-1.5">
+                  {[...zones]
+                    .sort((a, b) => b.demand - a.demand)
+                    .slice(0, 4)
+                    .map((z) => (
+                      <div key={z.id} className="flex items-center gap-2.5">
+                        <span
+                          className={cn(
+                            'w-20 shrink-0 truncate text-[11px] font-semibold',
+                            z.surge > 1 ? 'text-amber-300' : 'text-zinc-400'
+                          )}
+                        >
+                          {z.name}
+                        </span>
+                        <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-zinc-800">
+                          <div
+                            className={cn('h-full rounded-full', z.surge > 1 ? 'bg-amber-400' : 'bg-emerald-500/70')}
+                            style={{ width: `${Math.min(100, z.demand)}%` }}
+                            aria-hidden
+                          />
+                        </div>
+                        <span className="w-28 shrink-0 text-right text-[10px] tabular-nums text-zinc-500">
+                          {z.ordersWaiting} ждут · {z.waitingDrivers} своб.
+                        </span>
+                        <span
+                          className={cn(
+                            'w-12 shrink-0 text-right text-[11px] font-black tabular-nums',
+                            z.surge > 1 ? 'text-amber-300' : 'text-zinc-500'
+                          )}
+                        >
+                          ×{z.surge.toFixed(2).replace(/0$/, '').replace('.', ',')}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+                <p className="mt-2 text-[10px] leading-relaxed text-zinc-600">
+                  Коэффициент = спрос (заказы/водители + скорость запросов), кап ×1,5 — весь
+                  коэффициент ваш. Никаких платных «Мой район» / «По делам»: гео-фильтры и
+                  маршрутные заказы — бесплатны, «Домой» без сгорающего таймера.
+                </p>
               </div>
             )}
 

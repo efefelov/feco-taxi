@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Gavel, Layers, Play, Square, RotateCcw, Hand, CircleAlert, Check, X, Eye, Radio } from 'lucide-react'
+import { Gavel, Layers, Play, Square, RotateCcw, Hand, CircleAlert, Check, X, Eye, Radio, Flame } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { estimatePrice, num, plural, rub } from '@/lib/pryamo/format'
 import { cn } from '@/lib/utils'
@@ -652,6 +652,63 @@ export function AuctionSection() {
             <p className="text-sm font-semibold text-zinc-700">
               У монополиста 4 отказа подряд — блокировка ленты «за активность», баллы сгорают
             </p>
+          </div>
+        </motion.div>
+        {/* Спрос по формуле и бесплатные гео-функции */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-60px' }}
+          transition={{ duration: 0.5 }}
+          className="mt-8 overflow-hidden rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-7"
+        >
+          <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
+            <div>
+              <h3 className="flex items-center gap-2 text-lg font-black tracking-tight text-zinc-900">
+                <Flame className="h-5 w-5 text-amber-500" aria-hidden />
+                Как считается спрос и коэффициент — формулой, а не шаманством
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-600">
+                Коэффициент зоны — это не «алгоритм решает». Это отношение:{' '}
+                <strong className="text-zinc-900">
+                  сколько заказов ждут × скорость новых запросов ÷ сколько свободных водителей
+                  рядом
+                </strong>
+                . Учитываются обе плотности: плотность запросов (заказов в минуту на район) и
+                плотность такси (свободные водители, способные взять заказ в разумное время).
+                Спроса нет — коэффициент честный 1,0, даже если «зона повышенного спроса»
+                назначена. Кап ×1,5 — и весь коэффициент идёт водителю.
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-600">
+                В приложении водителя — живая теплокарта зон: сколько заказов ждут, сколько
+                водителей свободно, какой коэффициент. Никаких «5–10 минут тишины в зоне
+                повышенного спроса»: видно, почему заказ ещё не прилетел.
+              </p>
+            </div>
+            <div className="space-y-2.5">
+              {[
+                {
+                  t: '«Мой район» — бесплатно',
+                  d: 'У монополиста 1,02–9,15% комиссии за выбор районов, причём центр даёт наибольшую скидку — плати, чтобы работать там, где выгодно. У нас гео-фильтр ленты — параметр, а не услуга.',
+                },
+                {
+                  t: '«По делам» — бесплатно',
+                  d: 'У монополиста 9,15% за точку маршрута с заказами по пути. У нас: ставишь точку — аукцион сам подбирает заказы по маршруту, без процента с каждой поездки.',
+                },
+                {
+                  t: '«Домой» — без сгорающего счётчика',
+                  d: 'У монополиста 90 минут на режим, и счётчик не останавливается на заказах — бывало, что до дома не успеваешь. У нас режим живёт, пока вы его не выключили.',
+                },
+              ].map((x) => (
+                <div key={x.t} className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                  <p className="flex items-center gap-1.5 text-sm font-bold text-zinc-900">
+                    <Check className="h-4 w-4 text-emerald-600" aria-hidden />
+                    {x.t}
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-zinc-600">{x.d}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </motion.div>
       </div>

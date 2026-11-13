@@ -155,6 +155,7 @@ export function useMvpDriver(handlers: MvpDriverHandlers) {
   const [earnings, setEarnings] = useState<EarningsToday | null>(null)
   const [week, setWeek] = useState<WeekDay[]>([])
   const [lastRides, setLastRides] = useState<RideDTO[]>([])
+  const [zones, setZones] = useState<ZoneDTO[]>([])
   const handlersRef = useRef(handlers)
 
   useEffect(() => {
@@ -218,6 +219,7 @@ export function useMvpDriver(handlers: MvpDriverHandlers) {
     s.on('driver:accept-failed', (d: { orderId: string; reason: string }) =>
       handlersRef.current.onAcceptFailed(d.orderId, d.reason)
     )
+    s.on('demand:state', (d: { zones: ZoneDTO[] }) => setZones(d.zones ?? []))
     return () => {
       s.disconnect()
       socketRef.current = null
@@ -248,6 +250,7 @@ export function useMvpDriver(handlers: MvpDriverHandlers) {
     setEarnings(snap.earnings)
     setWeek(snap.week)
     setLastRides(snap.lastRides)
+    setZones(LOCAL_ZONES)
     // Срез состояния обновляем каждые 2 с: лента, доход, неделя;
     // тик подмешивает демо-заказы, когда приложение пассажира рядом молчит
     const t = window.setInterval(() => {
@@ -316,6 +319,7 @@ export function useMvpDriver(handlers: MvpDriverHandlers) {
     earnings,
     week,
     lastRides,
+    zones,
     goOnline,
     goOffline,
     accept,

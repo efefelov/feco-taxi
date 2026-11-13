@@ -523,13 +523,13 @@ export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
                               </span>
                               {demand.surge > 1 ? (
                                 <>
-                                  Спрос <span className="tabular-nums">×{surgeLabel(demand.surge)}</span> ·
-                                  кап <span className="tabular-nums">×1,5</span> — весь коэффициент
-                                  водителю
+                                  Спрос <span className="tabular-nums">×{surgeLabel(demand.surge)}</span> ·{' '}
+                                  {demand.ordersWaiting} зак. ждут · {demand.waitingDrivers} водителей
                                 </>
                               ) : (
                                 <>
-                                  Пиков нет — коэффициент <span className="tabular-nums">1,0</span>
+                                  Пиков нет · {demand.ordersWaiting} зак. ждут ·{' '}
+                                  {demand.waitingDrivers} водителей
                                 </>
                               )}
                             </span>

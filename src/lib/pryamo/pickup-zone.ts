@@ -123,6 +123,10 @@ export interface PickupDemand {
   demand: number
   /** Коэффициент спроса, 1..1,5 (кап движка) */
   surge: number
+  /** Заказов ждут в зоне прямо сейчас */
+  ordersWaiting: number
+  /** Свободных водителей в зоне */
+  waitingDrivers: number
 }
 
 /** Текущее состояние спроса для зоны подачи пассажира. null — данных ещё нет. */
@@ -136,6 +140,8 @@ export function pickupDemand(zones: ZoneDTO[], label: string): PickupDemand | nu
     name: z.name,
     demand: z.demand,
     surge: Math.min(1.5, Math.max(1, z.surge)),
+    ordersWaiting: z.ordersWaiting,
+    waitingDrivers: z.waitingDrivers,
   }
 }
 
