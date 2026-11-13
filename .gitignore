@@ -60,3 +60,4 @@ tool-results/
 # статик-сборка и деплой GitHub Pages
 .api-static-stash/
 .deploy-pages/
+.serve/
