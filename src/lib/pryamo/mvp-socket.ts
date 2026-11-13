@@ -222,6 +222,19 @@ export function useMvpDriver(handlers: MvpDriverHandlers) {
     }
   }, [])
 
+  // Переключение на локальный движок: если подключение не состоялось
+  // за LOCAL_FALLBACK_MS — работаем офлайн (тот же контракт)
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      if (!socketRef.current?.connected) setLocalMode(true)
+    }, LOCAL_FALLBACK_MS)
+    return () => window.clearTimeout(t)
+  }, [])
+
+  useEffect(() => {
+    if (localMode) setLocalModeActive(true)
+  }, [localMode])
+
   // Офлайн-режим: тот же контракт на локальном мини-движке
   useEffect(() => {
     if (!localMode) return
@@ -233,8 +246,10 @@ export function useMvpDriver(handlers: MvpDriverHandlers) {
     setEarnings(snap.earnings)
     setWeek(snap.week)
     setLastRides(snap.lastRides)
-    // Срез состояния обновляем каждые 2 с: лента, доход, неделя
+    // Срез состояния обновляем каждые 2 с: лента, доход, неделя;
+    // тик подмешивает демо-заказы, когда приложение пассажира рядом молчит
     const t = window.setInterval(() => {
+      localEngine.tick()
       const s2 = localEngine.driverSnapshot()
       setOrders(s2.orders)
       setEarnings(s2.earnings)

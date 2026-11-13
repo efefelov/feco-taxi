@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import {
   MapPin,
   ArrowRightLeft,
@@ -311,7 +311,7 @@ export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
       {/* ===== Контент ===== */}
       <div className="pryamo-scroll min-h-0 flex-1 overflow-y-auto">
         {tab === 'ride' && (
-          <AnimatePresence mode="wait">
+          <>
             {screen === 'home' && (
               <motion.div
                 key="home"
@@ -856,7 +856,7 @@ export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
                 </div>
               </motion.div>
             )}
-          </AnimatePresence>
+          </>
         )}
 
         {tab === 'history' && (

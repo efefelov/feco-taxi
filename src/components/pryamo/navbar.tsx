@@ -10,6 +10,7 @@ import {
   Radio,
   ChevronDown,
   Gavel,
+  CarFront,
   Star,
   Navigation,
   Building2,
@@ -33,8 +34,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
+
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? ''
+const withBase = (href: string) => (BASE_PATH && href.startsWith('/') ? BASE_PATH + href : href)
 import { useEngineStatus } from '@/lib/pryamo/socket'
-import { openMvpApp } from '@/components/pryamo/mvp'
+import Link from 'next/link'
 
 /** Прямые ссылки верхнего уровня */
 const NAV = [
@@ -64,6 +68,8 @@ const PRODUCT_GROUPS: {
   {
     title: 'Продукт',
     links: [
+      { href: '/passenger', label: 'Приложение пассажира', desc: 'самостоятельное, онбординг внутри', icon: Smartphone },
+      { href: '/driver', label: 'Приложение водителя', desc: 'самостоятельное, онбординг внутри', icon: CarFront },
       { href: '#fair', label: 'Аукцион', desc: 'лента без приоритетов', icon: Gavel },
       { href: '#rating', label: 'Рейтинг 2.0', desc: 'медиана вместо среднего', icon: Star },
       { href: '#tech', label: 'Технологии', desc: 'навигатор и GPS без клетки', icon: Navigation },
@@ -316,12 +322,24 @@ export function Navbar() {
               {engineLabel}
             </span>
             <Button
-              onClick={() => openMvpApp('passenger')}
+              asChild
               variant="outline"
               className="h-10 border-amber-400/50 bg-amber-400/10 font-bold text-amber-300 hover:bg-amber-400/20 hover:text-amber-200"
             >
-              <Smartphone className="mr-1 h-4 w-4" />
-              MVP-приложение
+              <Link href="/passenger">
+                <Smartphone className="mr-1 h-4 w-4" />
+                Пассажирам
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="h-10 border-zinc-700 bg-zinc-900/60 font-bold text-zinc-200 hover:bg-zinc-800 hover:text-white"
+            >
+              <Link href="/driver">
+                <CarFront className="mr-1 h-4 w-4" />
+                Водителям
+              </Link>
             </Button>
             <Button
               asChild
@@ -413,16 +431,24 @@ export function Navbar() {
                   {n.label}
                 </a>
               ))}
-              <button
-                onClick={() => {
-                  setOpen(false)
-                  openMvpApp('passenger')
-                }}
-                className="mt-2 flex items-center justify-center gap-2 rounded-xl border border-amber-400/50 bg-amber-400/10 px-4 py-3 text-base font-bold text-amber-300"
-              >
-                <Smartphone className="h-5 w-5" />
-                Открыть MVP-приложение
-              </button>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <a
+                  href={withBase('/passenger')}
+                  onClick={() => setOpen(false)}
+                  className="flex items-center justify-center gap-2 rounded-xl border border-amber-400/50 bg-amber-400/10 px-4 py-3 text-base font-bold text-amber-300"
+                >
+                  <Smartphone className="h-5 w-5" />
+                  Пассажирам
+                </a>
+                <a
+                  href={withBase('/driver')}
+                  onClick={() => setOpen(false)}
+                  className="flex items-center justify-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900/60 px-4 py-3 text-base font-bold text-zinc-200"
+                >
+                  <CarFront className="h-5 w-5" />
+                  Водителям
+                </a>
+              </div>
               <a
                 href="#join"
                 onClick={() => setOpen(false)}

@@ -19,7 +19,7 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { openMvpApp } from '@/components/pryamo/mvp'
+import Link from 'next/link'
 
 /**
  * «Приложения и подключение» — как выглядит продукт снаружи:
@@ -290,17 +290,27 @@ export function Apps() {
             <p className="flex items-start gap-2.5 text-sm text-zinc-600">
               <Play className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
               <span>
-                <strong className="text-zinc-900">Не хотите ждать сторов?</strong> MVP-прототип
-                обоих приложений уже работает в этом браузере — с живым движком заказов.
+                <strong className="text-zinc-900">Не хотите ждать сторов?</strong> Два
+                самостоятельных приложения уже работают в этом браузере — со своим
+                онбордингом и живым движком заказов между вкладками.
               </span>
             </p>
-            <button
-              onClick={() => openMvpApp('passenger')}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-bold text-zinc-950 shadow-md shadow-amber-300/50 transition-colors hover:bg-amber-300"
-            >
-              Открыть сейчас
-              <ArrowRight className="h-4 w-4" aria-hidden />
-            </button>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              <Link
+                href="/passenger"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-bold text-zinc-950 shadow-md shadow-amber-300/50 transition-colors hover:bg-amber-300"
+              >
+                Пассажир
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </Link>
+              <Link
+                href="/driver"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-bold text-zinc-700 transition-colors hover:border-zinc-400 hover:text-zinc-900"
+              >
+                Водитель
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </Link>
+            </div>
           </div>
         </motion.div>
       </div>

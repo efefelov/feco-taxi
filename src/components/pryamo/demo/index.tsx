@@ -6,7 +6,7 @@ import { Play, User, CarFront, Smartphone, ArrowRight } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { PassengerDemo } from './passenger-demo'
 import { DriverDemo } from './driver-demo'
-import { openMvpApp } from '@/components/pryamo/mvp'
+import Link from 'next/link'
 
 export function DemoSection() {
   const [tab, setTab] = useState('passenger')
@@ -80,18 +80,27 @@ export function DemoSection() {
           className="mx-auto mt-10 flex max-w-3xl flex-col items-center justify-between gap-4 rounded-2xl border border-amber-400/25 bg-gradient-to-r from-amber-400/8 via-zinc-900/60 to-zinc-900/60 px-6 py-5 sm:flex-row"
         >
           <p className="max-w-xl text-sm leading-relaxed text-zinc-400">
-            <span className="font-bold text-white">Хотите глубже?</span> Открыт MVP-прототип
-            обоих приложений: пассажир заказывает — водитель в соседней вкладке берёт заказ из
-            живой ленты. Смена ролей без перезагрузки.
+            <span className="font-bold text-white">Хотите глубже?</span> Два самостоятельных
+            приложения со своим онбордингом: пассажир заказывает — водитель в соседней
+            вкладке берёт заказ из живой ленты.
           </p>
-          <button
-            onClick={() => openMvpApp('passenger')}
-            className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-amber-400 px-5 py-3 text-sm font-bold text-zinc-950 shadow-lg shadow-amber-400/20 transition-colors hover:bg-amber-300"
-          >
-            <Smartphone className="h-4.5 w-4.5" aria-hidden />
-            Открыть MVP
-            <ArrowRight className="h-4 w-4" aria-hidden />
-          </button>
+          <div className="flex shrink-0 gap-2">
+            <Link
+              href="/passenger"
+              className="inline-flex items-center gap-2 rounded-xl bg-amber-400 px-5 py-3 text-sm font-bold text-zinc-950 shadow-lg shadow-amber-400/20 transition-colors hover:bg-amber-300"
+            >
+              <Smartphone className="h-4.5 w-4.5" aria-hidden />
+              Пассажир
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
+            <Link
+              href="/driver"
+              className="inline-flex items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900/60 px-5 py-3 text-sm font-bold text-zinc-200 transition-colors hover:border-zinc-500 hover:text-white"
+            >
+              Водитель
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
+          </div>
         </motion.div>
       </div>
     </section>

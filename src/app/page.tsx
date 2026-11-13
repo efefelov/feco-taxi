@@ -30,7 +30,6 @@ import { Waitlist } from '@/components/pryamo/waitlist'
 import { Footer } from '@/components/pryamo/footer'
 import { OnboardingWizard } from '@/components/pryamo/onboarding'
 import { ScrollProgress } from '@/components/pryamo/scroll-progress'
-import { MvpApp } from '@/components/pryamo/mvp'
 
 export default function Home() {
   return (
@@ -67,7 +66,6 @@ export default function Home() {
       <Footer />
       <OnboardingWizard />
       <ScrollProgress />
-      <MvpApp />
     </div>
   )
 }
