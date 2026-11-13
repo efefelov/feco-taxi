@@ -649,7 +649,7 @@ export function ShiftEconomics() {
         </motion.div>
 
 
-        {/* Три реальные смены YpuPiter.Taxi — плавающая шкала и её последствия */}
+        {/* Три реальные смены YouPiter.Taxi — плавающая шкала и её последствия */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -660,7 +660,7 @@ export function ShiftEconomics() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="flex items-center gap-2 text-lg font-black tracking-tight text-zinc-900">
               <ReceiptText className="h-5 w-5 text-rose-500" aria-hidden />
-              И это не одна смена: три выгрузки партнёра YpuPiter.Taxi
+              И это не одна смена: три выгрузки партнёра YouPiter.Taxi
             </h3>
             <span className="rounded-full bg-zinc-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-600">
               СПб · комфорт/комфорт+ · 2023 г.в. · ноябрь 2026
@@ -751,7 +751,7 @@ export function ShiftEconomics() {
         <p className="mt-6 text-center text-xs leading-relaxed text-zinc-400">
           Источники цифр: личный отчёт водителя за смену 01→02.10.2026 (внутри удержаний
           таксопарка: режимы «Мой район» 1,02–9,15% и «По делам» 9,9%) и три выгрузки смен
-          партнёра YpuPiter.Taxi (СПб, ноябрь 2026). Расчёт справа — наша публичная формула:
+          партнёра YouPiter.Taxi (СПб, ноябрь 2026). Расчёт справа — наша публичная формула:
           12% фикс + НПД 6% с чистой выплаты. Любую строку можно пересчитать самому — в этом
           смысл раздела.
         </p>
