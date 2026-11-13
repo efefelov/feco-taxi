@@ -14,6 +14,7 @@ import {
   MapPin,
   AlertTriangle,
   Calculator as CalcIcon,
+  Star,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { rub } from '@/lib/pryamo/format'
@@ -647,11 +648,112 @@ export function ShiftEconomics() {
           </div>
         </motion.div>
 
+
+        {/* Три реальные смены YpuPiter.Taxi — плавающая шкала и её последствия */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-60px' }}
+          transition={{ duration: 0.5 }}
+          className="mt-6 overflow-hidden rounded-2xl border border-zinc-200 bg-white p-6 sm:p-7"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="flex items-center gap-2 text-lg font-black tracking-tight text-zinc-900">
+              <ReceiptText className="h-5 w-5 text-rose-500" aria-hidden />
+              И это не одна смена: три выгрузки партнёра YpuPiter.Taxi
+            </h3>
+            <span className="rounded-full bg-zinc-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-zinc-600">
+              СПб · комфорт/комфорт+ · 2023 г.в. · ноябрь 2026
+            </span>
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-zinc-600">
+            У партнёра плавающая шкала: чем больше касса за смену — тем больше доля водителя.
+            Считаем удержания по трём реальным выгрузкам, копейка в копейку.
+          </p>
+
+          {/* Шкала */}
+          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+            {[
+              { share: '70/30', cond: 'касса ~14,5–19 тыс. (будни)' },
+              { share: '75/25', cond: 'касса ~19–22 тыс. (будни)' },
+              { share: '80/20', cond: 'касса свыше 22 тыс. (будни)' },
+            ].map((x) => (
+              <div key={x.share} className="rounded-xl border border-zinc-200 bg-zinc-50 p-3.5">
+                <p className="text-base font-black tabular-nums text-zinc-900">{x.share}</p>
+                <p className="mt-0.5 text-[11px] text-zinc-500">{x.cond} · в пт–сб пороги выше</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Три чека */}
+          <div className="mt-4 overflow-hidden rounded-xl border border-zinc-200">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-zinc-950 text-zinc-200">
+                <tr>
+                  <th className="px-3 py-2 font-bold">Смена</th>
+                  <th className="px-3 py-2 font-bold">Касса</th>
+                  <th className="px-3 py-2 font-bold">Удержания</th>
+                  <th className="px-3 py-2 font-bold">Чистыми</th>
+                  <th className="px-3 py-2 font-bold">Доля водителя</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-200 text-zinc-700">
+                {[
+                  { s: 'будни', g: '14 503 ₽', d: '8 940 ₽ — парк 30,0% + агрегатор 24,4% + налог 4,0% + прочее', n: '5 655,91 ₽', p: '38,7%' },
+                  { s: 'вторая', g: '22 155 ₽', d: '14 600 ₽ — парк 19,6% + агрегатор 23,6% + налог 4,0% + ГСМ 3 176 ₽ (Я.Заправки)', n: '7 975,13 ₽', p: '35,3%' },
+                  { s: 'третья', g: '19 738 ₽', d: '10 806 ₽ — парк 25,3% + агрегатор 23,7% + налог 4,1% + прочее', n: '9 171,70 ₽', p: '45,9%' },
+                ].map((row) => (
+                  <tr key={row.g}>
+                    <td className="px-3 py-2.5 font-semibold text-zinc-900">{row.s}</td>
+                    <td className="px-3 py-2.5 font-bold tabular-nums text-zinc-900">{row.g}</td>
+                    <td className="px-3 py-2.5 text-zinc-600">{row.d}</td>
+                    <td className="px-3 py-2.5 font-bold tabular-nums text-zinc-900">{row.n}</td>
+                    <td className="px-3 py-2.5">
+                      <span className="rounded bg-rose-500/10 px-1.5 py-0.5 font-bold tabular-nums text-rose-600">
+                        {row.p}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {[
+              {
+                title: 'Плавающая шкала = стимул к 14–16-часовым сменам',
+                body: 'Доля растёт вместе с кассой, но 80/20 достижимы только на сменах 14–16 часов. Уставший водитель — это комплимент «Забота» на 24 из 150 поездок, а не на каждую.',
+              },
+              {
+                title: 'Я.Заправки дают «дополнительный приоритет»',
+                body: 'Встроенная заправка влияет на доступ к заказам — платная опция замаскирована под сервис. В ПРЯМО лента без приоритетов: заправка — инструмент, а не пропуск.',
+              },
+              {
+                title: 'Рейтинг 4.88 — и 4 единицы без причин',
+                body: '144 пятёрки с комплиментами по осям (вежливость 27, чистота 27, забота 24, вождение 22) — и 4 единицы без единого объяснения. Рейтинг 2.0 ПРЯМО обязывает указать причину низкой оценки.',
+              },
+            ].map((x) => (
+              <div key={x.title} className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+                <p className="text-sm font-bold leading-snug text-zinc-900">{x.title}</p>
+                <p className="mt-1.5 text-xs leading-relaxed text-zinc-600">{x.body}</p>
+              </div>
+            ))}
+          </div>
+
+          <p className="mt-4 flex items-center gap-1.5 text-[11px] text-zinc-500">
+            <Star className="h-3 w-3 fill-amber-400 text-amber-400" aria-hidden />
+            Рейтинг водителя из скрина: 144 × 5★, 2 × 4★, 4 × 1★ → 4.88. Наш Рейтинг 2.0 сохраняет
+            комплименты-оси, но низкая оценка без причины технически невозможна.
+          </p>
+        </motion.div>
+
         <p className="mt-6 text-center text-xs leading-relaxed text-zinc-400">
-          Источник цифр слева — личный отчёт водителя за смену 01→02.10.2026 (внутри удержаний
-          таксопарка: режимы «Мой район» 1,02–9,15% и «По делам» 9,9%). Расчёт справа — наша
-          публичная формула: 12% фикс + НПД 6% с чистой выплаты. Любую строку можно пересчитать
-          самому — в этом смысл раздела.
+          Источники цифр: личный отчёт водителя за смену 01→02.10.2026 (внутри удержаний
+          таксопарка: режимы «Мой район» 1,02–9,15% и «По делам» 9,9%) и три выгрузки смен
+          партнёра YpuPiter.Taxi (СПб, ноябрь 2026). Расчёт справа — наша публичная формула:
+          12% фикс + НПД 6% с чистой выплаты. Любую строку можно пересчитать самому — в этом
+          смысл раздела.
         </p>
       </div>
     </section>

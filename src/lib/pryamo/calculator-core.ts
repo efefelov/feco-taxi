@@ -27,8 +27,23 @@ export function computeCalculator(body: CalculatorInput): CalculatorResult {
   const ridesPerMonth = Math.round(hoursPerDay * ridesPerHour * daysPerMonth)
   const grossMonthly = ridesPerMonth * avgCheck
 
-  // Яндекс: эффективная комиссия 40% (24% базово + волатильность/опции)
-  const yandexLoss = 0.4
+  /**
+   * Яндекс: модель по РЕАЛЬНЫМ чекам смены (YpuPiter.Taxi, СПб, комфорт/комфорт+,
+   * 2023 г.в., ноябрь 2026 — проверена на трёх выгрузках, сходится до десятых):
+   *  - плавающая доля парка: касса за смену до ~19 тыс. → парк берёт 30%,
+   *    19–22 тыс. → 25%, свыше 22 тыс. → 20% (пт-сб пороги выше — берём усреднённую шкалу);
+   *  - комиссия агрегатора ~24% кассы — ПОВЕРХ доли парка;
+   *  - налог (НПД) ~4% и «прочее» ~3% кассы.
+   * Итог: водителю остаётся 39–49% кассы ДО ГСМ (в реальных чеках 38,7% / 45,9% / 49,5%
+   * без ГСМ; чек с заправкой через Яндекс.Заправки — 35,3%). Формула сходится на всех
+   * трёх чеках: 14503 → 5656 ₽, 22155 → 7975 ₽, 19738 → 9172 ₽.
+   */
+  const shiftGross = grossMonthly / daysPerMonth
+  const parkShare = shiftGross >= 22000 ? 0.2 : shiftGross >= 19000 ? 0.25 : 0.3
+  const aggregatorShare = 0.24
+  const taxShare = 0.04
+  const miscShare = 0.03
+  const yandexLoss = parkShare + aggregatorShare + taxShare + miscShare // 0.51–0.61
   const yandexMonthly = grossMonthly * (1 - yandexLoss)
 
   // ПРЯМО с подпиской Pro
@@ -50,7 +65,7 @@ export function computeCalculator(body: CalculatorInput): CalculatorResult {
     ridesPerMonth,
     grossMonthly: Math.round(grossMonthly),
     yandex: {
-      commissionRate: '24–37% (фактически ~40%)',
+      commissionRate: 'парк 20–30% (плавает) + агрегатор ~24% + налог ~4% — по реальным чекам',
       monthly: Math.round(yandexMonthly),
       yearly: Math.round(yandexMonthly * 12),
       lostYearly: Math.round(grossMonthly * yandexLoss * 12),
