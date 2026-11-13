@@ -8,7 +8,7 @@ const tariffs = [
   { id: 'comfort-plus', name: 'Привольный', description: 'Простор для ног и мыслей: вода, зарядки USB-C, мягкий ход.', multiplier: 1.7, baseFare: 169, perKm: 21, perMin: 8, carClass: 'Toyota Camry, Kia K5, Skoda Superb · до 3 лет', sortOrder: 3 },
   { id: 'business', name: 'Барин', description: 'Едешь как хозяин: дресс-код водителя, встреча с табличкой, тишина.', multiplier: 2.4, baseFare: 299, perKm: 30, perMin: 12, carClass: 'Mercedes E, BMW 5, Audi A6 · до 2 лет', sortOrder: 4 },
   { id: 'van', name: 'Артель', description: 'Вся ватага в одной машине: до шести мест, кресла без доплаты.', multiplier: 1.5, baseFare: 149, perKm: 19, perMin: 8, carClass: 'VW Caravelle, Hyundai H-1, Lada Largus 7 мест · до 4 лет', sortOrder: 5 },
-  { id: 'intercity', name: 'Дальняк', description: 'Между городами: цена за всю машину целиком, фикс до конца маршрута.', multiplier: 1.0, baseFare: 0, perKm: 34, perMin: 0, carClass: 'Любой класс от Ладного · до 4 лет', sortOrder: 6 },
+  { id: 'intercity', name: 'Дальняк', description: 'Между городами: цена за всю машину целиком, фикс до конца маршрута.', multiplier: 1.0, baseFare: 500, perKm: 20, perMin: 0, carClass: 'Любой класс от Ладного · до 4 лет', sortOrder: 6 },
   { id: 'cargo', name: 'Хомяк', description: 'Тащит больше, чем видно: грузы, переезды, доставка рассады.', multiplier: 1.2, baseFare: 299, perKm: 28, perMin: 0, carClass: 'Газель, Ford Transit, VW Transporter · до 5 лет', sortOrder: 7 },
 ]
 

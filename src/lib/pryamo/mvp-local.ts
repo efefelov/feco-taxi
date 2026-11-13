@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { estimatePrice } from '@/lib/pryamo/format'
 import { TARIFF_FALLBACK } from '@/lib/pryamo/tariff-fallback'
 import { resolvePickupZoneId } from '@/lib/pryamo/pickup-zone'
+import { intercityDurationMin, intercityKm } from '@/lib/pryamo/cities'
 import { zoneMinFare } from '@/lib/pryamo/zone-forecast'
 import type {
   EarningsToday,
@@ -89,7 +90,7 @@ export const LOCAL_DRIVER: RideDriver = {
   name: 'Алексей П.',
   initials: 'АП',
   car: 'Kia Rio, белый',
-  plate: 'О 123 РТ 77',
+  plate: 'А 123 ВС 78',
   rating: 4.93,
   rides: 2341,
 }
@@ -501,8 +502,10 @@ export const localEngine = {
     if (mode === 'driver-page') return
     if (state.ride || state.order) return
     const t = tariffById(payload.tariffId)
-    const km = kmFor(payload.from, payload.to)
-    const min = Math.round(km * 2.2 + 4)
+    const km = intercityKm(payload.from, payload.to) ?? kmFor(payload.from, payload.to)
+    const min = kmFor(payload.from, payload.to) === km
+      ? Math.round(km * 2.2 + 4)
+      : intercityDurationMin(km)
     // Минимальная цена премиум-зоны (центр/аэропорт): короткие поездки не убыточны
     const zoneMin = zoneMinFare(resolvePickupZoneId(payload.from))
     const price = Math.max(estimatePrice(t, km, min), zoneMin ?? 0)

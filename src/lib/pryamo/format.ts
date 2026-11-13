@@ -49,3 +49,15 @@ export function estimatePrice(
     tariff.multiplier * surge
   return Math.round(raw / 10) * 10
 }
+
+/** «45 минут» / «1 ч 20 мин» / «9 ч 5 мин» — человеческая длительность поездки */
+export function durationHuman(min: number): string {
+  if (min < 90) {
+    const word = plural(min, 'минута', 'минуты', 'минут')
+    return `${min} ${word}`
+  }
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  const hw = plural(h, 'час', 'часа', 'часов')
+  return m > 0 ? `${h} ${hw} ${m} мин` : `${h} ${hw}`
+}

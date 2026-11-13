@@ -686,8 +686,8 @@ export function ShiftEconomics() {
           </div>
 
           {/* Три чека */}
-          <div className="mt-4 overflow-hidden rounded-xl border border-zinc-200">
-            <table className="w-full text-left text-xs">
+          <div className="mt-4 overflow-x-auto rounded-xl border border-zinc-200">
+            <table className="w-full min-w-[560px] text-left text-xs">
               <thead className="bg-zinc-950 text-zinc-200">
                 <tr>
                   <th className="px-3 py-2 font-bold">Смена</th>

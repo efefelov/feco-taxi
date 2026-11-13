@@ -297,7 +297,7 @@ function DriverOnboarding({ onDone }: { onDone: (p: DriverProfile) => void }) {
       onboarded: true,
       name: name.trim() || 'Алексей П.',
       car: car.trim() || 'Kia Rio, белый',
-      plate: plate.trim() || 'О 123 РТ 77',
+      plate: plate.trim() || 'А 123 ВС 78',
       plan,
       readyPack,
     })
@@ -387,7 +387,7 @@ function DriverOnboarding({ onDone }: { onDone: (p: DriverProfile) => void }) {
             <div className="mt-4 space-y-2.5">
               <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ваше имя" aria-label="Имя водителя" className="h-12 border-zinc-700 bg-zinc-950/60 text-base text-white placeholder:text-zinc-600" />
               <Input value={car} onChange={(e) => setCar(e.target.value)} placeholder="Авто: Kia Rio, белый" aria-label="Автомобиль" className="h-12 border-zinc-700 bg-zinc-950/60 text-base text-white placeholder:text-zinc-600" />
-              <Input value={plate} onChange={(e) => setPlate(e.target.value)} placeholder="Госномер: О 123 РТ 77" aria-label="Госномер" className="h-12 border-zinc-700 bg-zinc-950/60 text-base text-white placeholder:text-zinc-600" />
+              <Input value={plate} onChange={(e) => setPlate(e.target.value)} placeholder="Госномер: А 123 ВС 78" aria-label="Госномер" className="h-12 border-zinc-700 bg-zinc-950/60 text-base text-white placeholder:text-zinc-600" />
             </div>
             <WizardButton onClick={() => setStep(3)} label="Дальше" />
           </motion.div>

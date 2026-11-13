@@ -37,7 +37,7 @@ import { cn } from '@/lib/utils'
 import { toast } from '@/hooks/use-toast'
 import { CityMap } from '../demo/city-map'
 import { useMvpPassenger } from '@/lib/pryamo/mvp-socket'
-import { estimatePrice, rub, minutesWord } from '@/lib/pryamo/format'
+import { durationHuman, estimatePrice, rub } from '@/lib/pryamo/format'
 import {
   PASSENGER_HISTORY_LIMIT,
   loadPassengerHistory,
@@ -45,6 +45,7 @@ import {
 } from '@/lib/pryamo/mvp-storage'
 import { pickupDemand, resolvePickupZoneId, surgeLabel } from '@/lib/pryamo/pickup-zone'
 import { zoneMinFare } from '@/lib/pryamo/zone-forecast'
+import { intercityDurationMin, intercityKm } from '@/lib/pryamo/cities'
 import { TARIFF_FALLBACK } from '@/lib/pryamo/tariff-fallback'
 import {
   CANONICAL_TARIFF_NAMES,
@@ -55,18 +56,18 @@ import {
 import type { Receipt, RideDTO, Tariff } from '@/lib/pryamo/types'
 
 const ADDRESS_PRESETS = [
-  'ул. Тверская, 7',
-  'Ленинский пр-т, 45',
-  'Кутузовский пр-т, 32',
-  'ул. Арбат, 24',
-  'Аэропорт Шереметьево, терминал C',
-  'Белорусский вокзал',
-  'ул. Профсоюзная, 128',
-  'Москва-Сити, башня Федерация',
-  'Парк Горького, вход 1',
-  'Речной вокзал, 3',
-  'ул. Садовая-Кудринская, 12',
-  'Киевский вокзал, пл. Европы',
+  'Невский пр-т, 28',
+  'Московский вокзал',
+  'Пулково, терминал 1',
+  'ул. Рубинштейна, 18',
+  'Лиговский пр-т, 50',
+  'Крестовский остров',
+  'Приморский пр-т, 46',
+  'Стадион Газпром Арена',
+  'Кузнечный пер., 3',
+  'Наб. реки Мойки, 41',
+  'Комендантский пр-т, 9',
+  'Морской вокзал',
 ]
 
 const PAYMENTS = [
@@ -119,8 +120,8 @@ export interface PassengerHistoryItem {
 
 export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
   const [tariffs, setTariffs] = useState<Tariff[]>([])
-  const [from, setFrom] = useState('ул. Тверская, 7')
-  const [to, setTo] = useState('Аэропорт Шереметьево, терминал C')
+  const [from, setFrom] = useState('Невский пр-т, 28')
+  const [to, setTo] = useState('Пулково, терминал 1')
   const [tariffId, setTariffId] = useState('comfort')
   const [payment, setPayment] = useState<Payment>('card')
   const [comment, setComment] = useState('')
@@ -226,10 +227,14 @@ export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
   const tariff = tariffs.find((t) => t.id === tariffId)
 
   const distanceKm = useMemo(
-    () => Math.round((3 + hash01(from + to, 7) * 22) * 10) / 10,
+    () => intercityKm(from, to) ?? Math.round((3 + hash01(from + to, 7) * 22) * 10) / 10,
     [from, to]
   )
-  const durationMin = useMemo(() => Math.round(distanceKm * 2.2 + 4), [distanceKm])
+  const isIntercity = useMemo(() => !!intercityKm(from, to), [from, to])
+  const durationMin = useMemo(
+    () => (isIntercity ? intercityDurationMin(distanceKm) : Math.round(distanceKm * 2.2 + 4)),
+    [isIntercity, distanceKm]
+  )
   const price = useMemo(() => {
     if (!tariff) return 0
     const base = estimatePrice(tariff, distanceKm, durationMin)
@@ -490,8 +495,8 @@ export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
                       <div className="mt-2.5 space-y-1 border-t border-emerald-500/15 pt-2.5 text-xs">
                         <div className="flex justify-between text-zinc-400">
                           <span className="flex items-center gap-1.5">
-                            <RouteIcon className="h-3 w-3" aria-hidden /> {distanceKm} км · {durationMin}{' '}
-                            {minutesWord(durationMin)}
+                            <RouteIcon className="h-3 w-3" aria-hidden /> {distanceKm} км ·{' '}
+                            {durationHuman(durationMin)}
                           </span>
                           <span />
                         </div>
