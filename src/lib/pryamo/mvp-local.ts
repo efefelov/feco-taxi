@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { estimatePrice } from '@/lib/pryamo/format'
 import { TARIFF_FALLBACK } from '@/lib/pryamo/tariff-fallback'
+import { resolvePickupZoneId } from '@/lib/pryamo/pickup-zone'
+import { zoneMinFare } from '@/lib/pryamo/zone-forecast'
 import type {
   EarningsToday,
   OrderDTO,
@@ -501,7 +503,9 @@ export const localEngine = {
     const t = tariffById(payload.tariffId)
     const km = kmFor(payload.from, payload.to)
     const min = Math.round(km * 2.2 + 4)
-    const price = estimatePrice(t, km, min)
+    // Минимальная цена премиум-зоны (центр/аэропорт): короткие поездки не убыточны
+    const zoneMin = zoneMinFare(resolvePickupZoneId(payload.from))
+    const price = Math.max(estimatePrice(t, km, min), zoneMin ?? 0)
     const order: OrderDTO = {
       id: `local-${Date.now()}`,
       from: { label: payload.from, zoneId: 'center' },

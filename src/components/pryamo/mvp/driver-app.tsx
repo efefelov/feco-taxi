@@ -23,6 +23,7 @@ import {
   ShieldCheck,
   BadgePercent,
   Timer,
+  Home,
   Link2,
   Banknote,
   Flame,
@@ -34,6 +35,7 @@ import { cn } from '@/lib/utils'
 import { toast } from '@/hooks/use-toast'
 import { useMvpDriver } from '@/lib/pryamo/mvp-socket'
 import { rub, plural } from '@/lib/pryamo/format'
+import { forecastHour, forecastLabel, isPremiumZone, zoneForecast, type ForecastShift } from '@/lib/pryamo/zone-forecast'
 import {
   loadDriverEarnings,
   localDay,
@@ -72,6 +74,10 @@ export function DriverApp({ onOpenPassenger }: { onOpenPassenger?: () => void })
   // ленивый инициализатор читает localStorage один раз при монтировании.
   const [base] = useState<StoredDriverEarnings | null>(() => loadDriverEarnings())
   const [sessionDelta, setSessionDelta] = useState({ gross: 0, payout: 0, commission: 0, rides: 0 })
+
+  // Сдвиг прогноза зон: сейчас / +1 ч / +2 ч и режим «Домой»
+  const [forecastShift, setForecastShift] = useState<ForecastShift>(0)
+  const [homeMode, setHomeMode] = useState(false)
 
   // Тикер для обратного отсчёта заказов
   const [, forceTick] = useState(0)
@@ -442,41 +448,58 @@ export function DriverApp({ onOpenPassenger }: { onOpenPassenger?: () => void })
                 <div className="flex items-center justify-between">
                   <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
                     <Flame className="h-3 w-3 text-amber-400" aria-hidden />
-                    Зоны · спрос прямо сейчас
+                    Зоны · {forecastLabel(forecastShift)}
                   </p>
-                  <span className="text-[9px] text-zinc-600">заказы ждут / водители свободны</span>
+                  <div className="flex gap-1">
+                    {([0, 1, 2] as ForecastShift[]).map((sft) => (
+                      <button key={sft} onClick={() => setForecastShift(sft)}
+                        aria-pressed={forecastShift === sft}
+                        className={cn('rounded-lg border px-2 py-0.5 text-[10px] font-bold transition-colors',
+                          forecastShift === sft ? 'border-emerald-500 bg-emerald-500/10 text-emerald-300' : 'border-zinc-700 text-zinc-500 hover:text-zinc-300')}
+                      >
+                        {sft === 0 ? 'сейчас' : `+${sft} ч`}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="mt-2.5 space-y-1.5">
                   {[...zones]
-                    .sort((a, b) => b.demand - a.demand)
+                    .map((z) => ({ z, fc: zoneForecast(z, forecastHour(forecastShift)) }))
+                    .sort((a, b) => b.fc.demand - a.fc.demand)
                     .slice(0, 4)
-                    .map((z) => (
+                    .map(({ z, fc }) => (
                       <div key={z.id} className="flex items-center gap-2.5">
                         <span
                           className={cn(
-                            'w-20 shrink-0 truncate text-[11px] font-semibold',
-                            z.surge > 1 ? 'text-amber-300' : 'text-zinc-400'
+                            'w-24 shrink-0 truncate text-[11px] font-semibold',
+                            fc.surge > 1 ? 'text-amber-300' : 'text-zinc-400'
                           )}
+                          title={isPremiumZone(z.id) ? 'Премиум-зона: минимальная цена коротких поездок' : undefined}
                         >
                           {z.name}
+                          {isPremiumZone(z.id) && (
+                            <span className="ml-1 rounded bg-amber-400/15 px-1 py-px text-[8px] font-black uppercase text-amber-400">
+                              премиум
+                            </span>
+                          )}
                         </span>
                         <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-zinc-800">
                           <div
-                            className={cn('h-full rounded-full', z.surge > 1 ? 'bg-amber-400' : 'bg-emerald-500/70')}
-                            style={{ width: `${Math.min(100, z.demand)}%` }}
+                            className={cn('h-full rounded-full', fc.surge > 1 ? 'bg-amber-400' : 'bg-emerald-500/70')}
+                            style={{ width: `${Math.min(100, fc.demand)}%` }}
                             aria-hidden
                           />
                         </div>
                         <span className="w-28 shrink-0 text-right text-[10px] tabular-nums text-zinc-500">
-                          {z.ordersWaiting} ждут · {z.waitingDrivers} своб.
+                          {forecastShift === 0 ? `${z.ordersWaiting} ждут · ${z.waitingDrivers} своб.` : 'прогноз спроса'}
                         </span>
                         <span
                           className={cn(
                             'w-12 shrink-0 text-right text-[11px] font-black tabular-nums',
-                            z.surge > 1 ? 'text-amber-300' : 'text-zinc-500'
+                            fc.surge > 1 ? 'text-amber-300' : 'text-zinc-500'
                           )}
                         >
-                          ×{z.surge.toFixed(2).replace(/0$/, '').replace('.', ',')}
+                          ×{fc.surge.toFixed(2).replace(/0$/, '').replace('.', ',')}
                         </span>
                       </div>
                     ))}
@@ -486,6 +509,72 @@ export function DriverApp({ onOpenPassenger }: { onOpenPassenger?: () => void })
                   коэффициент ваш. Никаких платных «Мой район» / «По делам»: гео-фильтры и
                   маршрутные заказы — бесплатны, «Домой» без сгорающего таймера.
                 </p>
+              </div>
+            )}
+
+            {/* Режим «Домой»: цепочка заказов по маршруту, без сгорающего таймера */}
+            {online && !inRide && (
+              <div className={cn(
+                'rounded-2xl border p-4',
+                homeMode ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-zinc-800 bg-zinc-900/60'
+              )}>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="flex items-center gap-1.5 text-xs font-bold text-white">
+                    <Home className={cn('h-4 w-4', homeMode ? 'text-emerald-400' : 'text-zinc-500')} aria-hidden />
+                    Домой
+                    {homeMode && (
+                      <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-emerald-300">
+                        включён · без таймера
+                      </span>
+                    )}
+                  </p>
+                  <button
+                    onClick={() => setHomeMode((v) => !v)}
+                    className={cn(
+                      'rounded-lg border px-3 py-1.5 text-[11px] font-bold transition-colors',
+                      homeMode
+                        ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
+                        : 'border-zinc-700 text-zinc-400 hover:text-white'
+                    )}
+                    aria-pressed={homeMode}
+                  >
+                    {homeMode ? 'Выключить' : 'Включить'}
+                  </button>
+                </div>
+                {homeMode && (
+                  <div className="mt-2.5">
+                    <p className="text-[11px] leading-relaxed text-zinc-400">
+                      Аукцион подбирает заказы по маршруту домой — каждый в один тап, последний
+                      довозит до подъезда. Счётчик 90 минут не сгорает: время ваших заказов в
+                      режим не входит.
+                    </p>
+                    <div className="mt-2.5 space-y-1.5">
+                      {orders.slice(0, 3).map((o, i) => (
+                        <div key={o.id} className="flex items-center gap-2 rounded-lg bg-zinc-950/50 px-3 py-2 text-[11px]">
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-[10px] font-black text-emerald-300">
+                            {i + 1}
+                          </span>
+                          <span className="min-w-0 flex-1 truncate text-zinc-300">
+                            {o.from.label} → {o.to.label}
+                          </span>
+                          <span className="shrink-0 font-bold tabular-nums text-emerald-400">
+                            +{rub(o.driverPayout)}
+                          </span>
+                        </div>
+                      ))}
+                      {orders.length === 0 && (
+                        <div className="rounded-lg border border-dashed border-zinc-800 px-3 py-2.5 text-[11px] text-zinc-500">
+                          Аукцион подберёт заказы по маршруту, как только они появятся в ленте
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[11px]">
+                        <Home className="h-3.5 w-3.5 shrink-0 text-emerald-400" aria-hidden />
+                        <span className="flex-1 text-zinc-300">последняя точка — ваш подъезд</span>
+                        <span className="font-bold text-emerald-300">домой</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

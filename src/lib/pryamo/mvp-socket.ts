@@ -244,7 +244,11 @@ export function useMvpDriver(handlers: MvpDriverHandlers) {
     if (!localMode) return
     localEngine.joinDriver(handlers)
     setIdentity(LOCAL_DRIVER)
-    setOnline(localEngine.isDriverOnline())
+    // Если водитель успел выйти на линию до переключения движка — сохраняем намерение
+    setOnline((was) => {
+      if (was) localEngine.goOnline()
+      return was
+    })
     const snap = localEngine.driverSnapshot()
     setOrders(snap.orders)
     setEarnings(snap.earnings)

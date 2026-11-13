@@ -43,7 +43,8 @@ import {
   loadPassengerHistory,
   savePassengerHistory,
 } from '@/lib/pryamo/mvp-storage'
-import { pickupDemand, surgeLabel } from '@/lib/pryamo/pickup-zone'
+import { pickupDemand, resolvePickupZoneId, surgeLabel } from '@/lib/pryamo/pickup-zone'
+import { zoneMinFare } from '@/lib/pryamo/zone-forecast'
 import { TARIFF_FALLBACK } from '@/lib/pryamo/tariff-fallback'
 import {
   CANONICAL_TARIFF_NAMES,
@@ -229,10 +230,18 @@ export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
     [from, to]
   )
   const durationMin = useMemo(() => Math.round(distanceKm * 2.2 + 4), [distanceKm])
-  const price = useMemo(
-    () => (tariff ? estimatePrice(tariff, distanceKm, durationMin) : 0),
-    [tariff, distanceKm, durationMin]
-  )
+  const price = useMemo(() => {
+    if (!tariff) return 0
+    const base = estimatePrice(tariff, distanceKm, durationMin)
+    // Премиум-зоны (центр, аэропорт): короткая поездка не бывает убыточной —
+    // минимальная цена зоны, видна пассажиру до заказа отдельной строкой
+    const zoneMin = zoneMinFare(resolvePickupZoneId(from))
+    return Math.max(base, zoneMin ?? 0)
+  }, [tariff, distanceKm, durationMin, from])
+  const zoneMinApplied = useMemo(() => {
+    const zoneMin = zoneMinFare(resolvePickupZoneId(from))
+    return zoneMin !== null && tariff !== undefined && price === zoneMin && price > 0
+  }, [from, price, tariff])
 
   // Живой спрос зоны подачи: demand:state прилетает каждые ~5 с
   const demand = useMemo(() => pickupDemand(zones, from), [zones, from])
@@ -486,6 +495,12 @@ export function PassengerApp({ onOpenDriver }: { onOpenDriver?: () => void }) {
                           </span>
                           <span />
                         </div>
+                        {zoneMinApplied && (
+                          <div className="flex justify-between">
+                            <span className="text-zinc-500">Минимальная цена зоны · короткая поездка</span>
+                            <span className="font-semibold text-amber-300">{rub(price)}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between">
                           <span className="text-zinc-500">Водитель получит · 88%</span>
                           <span className="font-bold text-emerald-400">
