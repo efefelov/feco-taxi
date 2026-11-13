@@ -1,4 +1,4 @@
 1:"$Sreact.fragment"
-2:I[39756,["/feco-taxi/_next/static/chunks/76eec19b8d663f5b.js","/feco-taxi/_next/static/chunks/1ce701f40cd26273.js","/feco-taxi/_next/static/chunks/74f1b9da08b28ae5.js"],"default"]
-3:I[37457,["/feco-taxi/_next/static/chunks/76eec19b8d663f5b.js","/feco-taxi/_next/static/chunks/1ce701f40cd26273.js","/feco-taxi/_next/static/chunks/74f1b9da08b28ae5.js"],"default"]
-0:{"buildId":"8MLuSeTt7JPePDA0n9QJ6","rsc":["$","$1","c",{"children":[null,["$","$L2",null,{"parallelRouterKey":"children","template":["$","$L3",null,{}]}]]}],"loading":null,"isPartial":false}
+2:I[39756,["/feco-taxi/_next/static/chunks/046138b5099a4867.js","/feco-taxi/_next/static/chunks/61cc43b3d7ad2990.js","/feco-taxi/_next/static/chunks/c7619299ad5a64dc.js"],"default"]
+3:I[37457,["/feco-taxi/_next/static/chunks/046138b5099a4867.js","/feco-taxi/_next/static/chunks/61cc43b3d7ad2990.js","/feco-taxi/_next/static/chunks/c7619299ad5a64dc.js"],"default"]
+0:{"buildId":"u9qMri47S_xoO0vnrN_Po","rsc":["$","$1","c",{"children":[null,["$","$L2",null,{"parallelRouterKey":"children","template":["$","$L3",null,{}]}]]}],"loading":null,"isPartial":false}
