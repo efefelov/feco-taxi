@@ -1,4 +1,4 @@
 1:"$Sreact.fragment"
 2:I[39756,["/feco-taxi/_next/static/chunks/046138b5099a4867.js","/feco-taxi/_next/static/chunks/61cc43b3d7ad2990.js","/feco-taxi/_next/static/chunks/c7619299ad5a64dc.js"],"default"]
 3:I[37457,["/feco-taxi/_next/static/chunks/046138b5099a4867.js","/feco-taxi/_next/static/chunks/61cc43b3d7ad2990.js","/feco-taxi/_next/static/chunks/c7619299ad5a64dc.js"],"default"]
-0:{"buildId":"Gzn1WB4V6o5RYIuWV_vYI","rsc":["$","$1","c",{"children":[null,["$","$L2",null,{"parallelRouterKey":"children","template":["$","$L3",null,{}]}]]}],"loading":null,"isPartial":false}
+0:{"buildId":"COFoh8kQRv6WvXEsBGI1q","rsc":["$","$1","c",{"children":[null,["$","$L2",null,{"parallelRouterKey":"children","template":["$","$L3",null,{}]}]]}],"loading":null,"isPartial":false}
